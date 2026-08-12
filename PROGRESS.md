@@ -5,4 +5,6 @@
 - All documentation aligned with `.clinerules` and hackathon constraints.
 
 **Next Steps**:
-- Begin F01: Core Infrastructure implementation (FastAPI shell and Streamlit shell).
+- Implement Subtask F01.1: FastAPI Application Shell.
+- Implement Subtask F01.2: Streamlit Frontend Shell.
+- Implement Subtask F01.3: End-to-End Orchestration.
