@@ -1,6 +1,6 @@
 ## [2026-12-08] - F01 Execution
 - Verified FastAPI Application Shell (F01.1) and marked it as passing.
-- Developed Streamlit Frontend Shell (F01.2) in `frontend/app.py` with wide layout, title, agent modes placeholder, and backend connection test capability.
+- Developed Streamlit Frontend Shell (F01.2) in `frontend/app.py` with wide layout, title, agent modes placeholder, reference media upload / text area inputs, and backend connection test capability.
 - Validated complete system-wide connectivity (F01.3) with `make check` passing 100% cleanly.
 - Upgraded typing annotations and code formatting to comply with ruff and mypy.
 

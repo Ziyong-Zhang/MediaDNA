@@ -22,6 +22,30 @@ agent_mode: str = st.sidebar.selectbox(
 )
 st.sidebar.info(f"Currently selected agent: {agent_mode}")
 
+# Reference Media Input Placeholders
+st.header("Reference Media Inputs")
+media_type: str = st.radio(
+    "Select Input Type",
+    options=["File Upload", "Text Transcript/Script"],
+    horizontal=True,
+)
+
+if media_type == "File Upload":
+    uploaded_file = st.file_uploader(
+        "Upload reference media file (video, audio, etc.)",
+        type=["mp4", "mp3", "wav", "m4a"],
+    )
+    if uploaded_file is not None:
+        st.success(f"File uploaded successfully: {uploaded_file.name}")
+else:
+    transcript_text: str = st.text_area(
+        "Enter reference transcript or script content",
+        height=200,
+        placeholder="Paste your video/audio transcript or creative script here...",
+    )
+    if transcript_text:
+        st.info(f"Transcript input received ({len(transcript_text)} characters).")
+
 # Connection testing section
 st.header("Backend Connection Test")
 
