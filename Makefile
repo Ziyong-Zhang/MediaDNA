@@ -7,7 +7,7 @@ auth:
 	gcloud auth application-default login --project media-dna-505118
 
 test:
-	uv run pytest tests/ -q --no-header --no-summary
+	PYTHONPATH=. uv run pytest tests/ -q
 
 lint:
 	uv run ruff check . --quiet

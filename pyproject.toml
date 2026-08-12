@@ -26,4 +26,7 @@ exclude = [
 ]
 
 [tool.mypy]
+files = ["backend", "frontend", "tests"]
 exclude = ['^\.venv/', '^venv/']
+strict = true
+explicit_package_bases = true
