@@ -1,0 +1,29 @@
+[project]
+name = "media-dna"
+version = "0.1.0"
+description = "Viral structure extractor for Agentic Cinema Hackathon"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "streamlit",
+    "google-cloud-aiplatform[agent_engines,adk]>=1.101.0"
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "mypy",
+    "ruff"
+]
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__"
+]
+
+[tool.mypy]
+exclude = ['^\.venv/', '^venv/']
