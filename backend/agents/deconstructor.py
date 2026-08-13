@@ -2,7 +2,7 @@ import json
 import os
 from typing import Any
 
-from google.cloud import aiplatform  # type: ignore
+from google.cloud import aiplatform
 
 from backend.schemas.beat_sheet import BeatSheet
 
@@ -34,7 +34,7 @@ class DeconstructorAgent:
             A populated BeatSheet model.
         """
         # Let's import generative models dynamically inside to avoid unnecessary global overhead during testing
-        from vertexai.generative_models import (  # type: ignore
+        from vertexai.generative_models import (
             GenerationConfig,
             GenerativeModel,
         )
