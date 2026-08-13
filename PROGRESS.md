@@ -1,3 +1,15 @@
+## [2026-08-13] - F06 Execution
+- Implemented `frontend/api_client.py` (F06.1): `deconstruct()`, `architect()`, `produce()`, `health()`, all raising `BackendError`; sole HTTP seam under `frontend/`.
+- Rewrote `frontend/app.py` (F06.2-F06.4) to chain the three stages through `st.session_state`: Deconstructor → Architect → Director, each gated on the previous stage's output existing.
+- Added `tests/conftest.py` with a shared `live_backend_url` fixture (real `uvicorn.Server` on a background thread, genuine HTTP) and a `mocked_gemini_pipeline()` context manager (mocks `aiplatform.init`, `GenerativeModel`, `GenerationConfig`, `fetch_viral_templates`, dispatching canned JSON per agent by prompt content).
+- Added `tests/test_frontend_api_client.py` (Tier 2 mocked + Tier 3 live-backend), `tests/test_frontend_ui.py` (`AppTest`-driven Tier 2/3 per workflow stage), `tests/test_frontend_e2e.py` (Tier 3 full Deconstruct → Align → Produce pipeline in one `AppTest` session).
+- Added `tests/__init__.py` to make `tests` a proper package so `tests.conftest` helpers can be imported and type-checked consistently by `mypy --strict`.
+- `make check` passes cleanly: 19 tests total (ruff + mypy --strict clean). F06 and F06.1-F06.5 marked passing in `docs/features.md`, each with recorded Tier 1/2/3 evidence per the Three-Tier Termination Check policy.
+- The full MediaDNA pipeline (Streamlit UI → FastAPI → Deconstructor/Architect/Director agents) is now wired end-to-end and verified with mocked Gemini; only live GCP credentials and a real ClickHouse `viral_templates` table remain as external, non-code prerequisites for a fully live demo.
+
+**Next Steps**:
+- No further planned features in `docs/features.md`; candidate follow-ups (not yet scoped): provision the ClickHouse `viral_templates` table for live MCP calls, wire real GCP credentials for a live demo run, and richer error/loading UX in the frontend.
+
 ## [2026-08-13] - F06 Planning
 - Formalized a "Three-Tier Termination Check" verification policy in `docs/features.md` (Tier 1: ruff+mypy static analysis; Tier 2: actual runtime execution — pytest / `streamlit.testing.v1.AppTest`; Tier 3: system-level end-to-end correctness). No task may be marked `passing` without evidence at all three tiers going forward.
 - Wrote `docs/adr/0006-frontend-backend-integration.md` documenting the frontend integration design before implementation: `frontend/api_client.py` as the sole HTTP seam, `st.session_state` for pipeline state, `AppTest` for Tier 2, `TestClient`-backed real backend for Tier 3.

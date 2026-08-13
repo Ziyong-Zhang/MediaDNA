@@ -133,9 +133,10 @@ No task may be marked `passing` until all three tiers below are satisfied and th
 ## F06: Frontend-Backend Integration (Full Pipeline Wiring)
 - **Behavior**: Wire `frontend/app.py` to the three real backend endpoints (`/api/v1/deconstruct`, `/api/v1/architect`, `/api/v1/produce`) so a user can run the full Deconstruct → Align → Produce pipeline from the UI, instead of only the health check. UI never calls agents/ClickHouse directly — all calls go through FastAPI.
 - **Process**: Documented first in `docs/adr/0006-frontend-backend-integration.md`, then built via F06.1-F06.5 below. Every sub-task must satisfy the Three-Tier Termination Check before being marked `passing`.
-- **Verification**: `pytest tests/test_frontend_api_client.py tests/test_frontend_ui.py tests/test_frontend_e2e.py` (Tier 2 + Tier 3, using `streamlit.testing.v1.AppTest` and a `TestClient`-backed FastAPI app; mocked Gemini only).
-- **State**: todo
+- **Verification**: `pytest tests/test_frontend_api_client.py tests/test_frontend_ui.py tests/test_frontend_e2e.py` (Tier 2 + Tier 3, using `streamlit.testing.v1.AppTest` and a real in-process `uvicorn` server; mocked Gemini only).
+- **State**: passing
 - **Prerequisite**: F02.3, F04.3, F05.3 (all endpoints implemented and passing, done).
+- **Evidence**: `docs/adr/0006-frontend-backend-integration.md`, `frontend/api_client.py`, `frontend/app.py` (3 workflow sections), `tests/conftest.py` (shared `live_backend_url` fixture + `mocked_gemini_pipeline` helper), `tests/test_frontend_api_client.py`, `tests/test_frontend_ui.py`, `tests/test_frontend_e2e.py`; `make check` passes cleanly (19 tests total, ruff + mypy --strict clean).
 
 ## F06.1: Backend API Client Layer
 - **Behavior**: A single typed module isolates all HTTP calls from the UI to the backend, extending the existing `ping_backend` pattern to the three agent endpoints.
@@ -143,8 +144,8 @@ No task may be marked `passing` until all three tiers below are satisfied and th
 - **Test**:
   - Tier 1: `ruff check .` + `mypy . --strict` clean on `frontend/api_client.py`.
   - Tier 2: `tests/test_frontend_api_client.py` mocks `requests.post`, calls each function directly, asserts parsed JSON is returned and `BackendError` is raised on a mocked failure response — actually executes the functions.
-  - Tier 3: an integration test in the same file points `api_client`'s HTTP calls at the real FastAPI `app` (via `TestClient`, mocked Gemini) and asserts a real `deconstruct()` call round-trips a valid `BeatSheet` dict end-to-end.
-- **State**: todo
+  - Tier 3: `tests/conftest.py::live_backend_url` runs the real FastAPI `app` via `uvicorn.Server` on a background thread (real HTTP, mocked Gemini only); the test points `api_client` at that URL and asserts a real `deconstruct()` call round-trips a valid `BeatSheet` dict end-to-end.
+- **State**: passing
 - **Prerequisite**: F02.3, F04.3, F05.3 endpoints exist (done).
 
 ## F06.2: Deconstructor Workflow UI Wiring
@@ -153,27 +154,27 @@ No task may be marked `passing` until all three tiers below are satisfied and th
 - **Test**:
   - Tier 1: ruff + mypy clean.
   - Tier 2: `tests/test_frontend_ui.py::test_deconstructor_workflow` uses `AppTest.from_file("frontend/app.py")`, mocks `api_client.deconstruct`, sets the text area, clicks the button, asserts the rendered output and `session_state["beat_sheet"]` — the script actually runs headlessly.
-  - Tier 3: same AppTest driven against `api_client.deconstruct` routed into the real `TestClient(app)` with mocked Gemini, asserting the on-screen hook/pacing/events match the mocked Gemini response exactly.
-- **State**: todo
+  - Tier 3: same AppTest driven with `BACKEND_URL` pointed at `live_backend_url` (real uvicorn server, mocked Gemini), asserting the on-screen hook/pacing/events match the mocked Gemini response exactly.
+- **State**: passing
 - **Prerequisite**: F06.1.
 
 ## F06.3: Architect Workflow UI Wiring
 - **Behavior**: A new UI section takes a creative brief text input plus the `beat_sheet` from `session_state`, calls `api_client.architect()`, renders the returned `Blueprint`, and stores it in `session_state` for the next stage.
 - **Process**: Add the section below the Deconstructor output in `frontend/app.py`, disabled/hidden until a `beat_sheet` is present in `session_state`.
 - **Test**: Same Tier 1/2/3 pattern as F06.2, in `tests/test_frontend_ui.py::test_architect_workflow`.
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F06.2 (needs `beat_sheet` in `session_state`), F06.1.
 
 ## F06.4: Director Workflow UI Wiring
 - **Behavior**: A new UI section takes the `blueprint` from `session_state`, calls `api_client.produce()`, and renders the TTS script, visual prompts, and metadata.
 - **Process**: Add the section below the Architect output in `frontend/app.py`, disabled/hidden until a `blueprint` is present in `session_state`.
 - **Test**: Same Tier 1/2/3 pattern as F06.2/F06.3, in `tests/test_frontend_ui.py::test_director_workflow`.
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F06.3, F06.1.
 
 ## F06.5: Full Pipeline End-to-End Verification
 - **Behavior**: Prove the complete user scenario — enter a transcript, run Deconstructor, run Architect, run Director — produces correctly rendered final assets, with the real FastAPI backend in the loop (mocked Gemini only, everything else real).
 - **Process**: No new application code; a dedicated test wires the three prior stages together in one flow.
-- **Test**: `tests/test_frontend_e2e.py` — single `AppTest` session driving all three workflows in sequence against the real `TestClient(app)` (mocked Gemini at each agent boundary), asserting each stage's output correctly feeds the next stage's input and the final `ProductionAssets` rendering matches the mocked Gemini output. This is Tier 3 evidence for the whole feature, not just a single sub-task.
-- **State**: todo
+- **Test**: `tests/test_frontend_e2e.py` — single `AppTest` session driving all three workflows in sequence against the real live `uvicorn` server (mocked Gemini at each agent boundary), asserting each stage's output correctly feeds the next stage's input and the final `ProductionAssets` rendering matches the mocked Gemini output. This is Tier 3 evidence for the whole feature, not just a single sub-task.
+- **State**: passing
 - **Prerequisite**: F06.1, F06.2, F06.3, F06.4.
