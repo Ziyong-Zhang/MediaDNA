@@ -22,6 +22,22 @@ Build "MediaDNA" for the Agentic Cinema Hackathon.
 - Auth: `make auth`
 - Validate: `make check`
 
+## Definition of Done
+- Feature complete = end-to-end verification passed, not "code is written"
+- Required verification levels:
+  1. Unit tests pass
+  2. Integration tests pass
+  3. End-to-end flow verification passes
+- Do not proceed to level 2 if level 1 fails
+- Do not proceed to level 3 if level 2 fails
+
+## Session Exit Checklist
+- [ ] Build passes (npm run build)
+- [ ] All tests pass (npm test)
+- [ ] Feature list updated
+- [ ] No debug code remaining (console.log, debugger, TODO)
+- [ ] Standard startup path available (npm run dev)
+
 ## Command whitelist
 - `git add`
 - `git commit`
