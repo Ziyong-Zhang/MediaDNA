@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from backend.agents.architect import ArchitectAgent
 from backend.agents.deconstructor import DeconstructorAgent
 from backend.schemas.beat_sheet import BeatSheet
+from backend.schemas.blueprint import Blueprint
 
 app = FastAPI(title="MediaDNA Backend")
 
@@ -31,6 +33,13 @@ class DeconstructRequest(BaseModel):
     content: str = Field(..., description="Unstructured transcript or script content to deconstruct")
 
 
+class ArchitectRequest(BaseModel):
+    """Schema for structural alignment request."""
+
+    beat_sheet: BeatSheet = Field(..., description="The Deconstructor's structured analysis of the reference media")
+    creative_brief: str = Field(..., description="The user's creative intent/constraints for the new production")
+
+
 @app.get("/health")
 async def health_check() -> HealthResponse:
     """Check the health status of the backend service."""
@@ -42,3 +51,11 @@ async def deconstruct_media(payload: DeconstructRequest) -> BeatSheet:
     """Deconstruct unstructured media text into a structured BeatSheet."""
     agent = DeconstructorAgent()
     return await agent.analyze_media(payload.content)
+
+
+@app.post("/api/v1/architect", response_model=Blueprint)
+async def align_structure(payload: ArchitectRequest) -> Blueprint:
+    """Map a reference BeatSheet and creative brief onto a structural Blueprint."""
+    agent = ArchitectAgent()
+    return await agent.align_structure(payload.beat_sheet, payload.creative_brief)
+

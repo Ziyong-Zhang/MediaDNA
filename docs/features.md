@@ -70,28 +70,29 @@
 ## F04: Agent Topology (The Architect)
 - **Behavior**: Takes the Deconstructor's `BeatSheet` + user creative constraints + relevant `ViralTemplate`s (via F03 MCP tool) and produces a `Blueprint` — a structural plan for the new production that preserves proven structure while allowing creative deviation.
 - **Verification**: `pytest tests/test_architect.py` (mocked Gemini + mocked MCP fetch).
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F02 (BeatSheet schema + Deconstructor pattern to reuse), F03.3 (MCP wiring so the Architect can fetch templates).
+- **Evidence**: `docs/adr/0004-architect-agent-blueprint.md`, `backend/schemas/blueprint.py`, `backend/agents/architect.py`, `POST /api/v1/architect` in `backend/main.py`; `tests/test_architect.py` and `make check` pass cleanly.
 
 ## F04.1: Blueprint Pydantic Schema
 - **Behavior**: Strict Pydantic v2 schema capturing the mapping between the reference structure and the new creative brief.
 - **Process**: Create `backend/schemas/blueprint.py` with a `Blueprint` model (e.g. `adapted_beat_sheet: BeatSheet`, `structural_alignment_notes: list[str]`, `creative_deviations: list[str]`), following the same rigor as `BeatSheet`.
 - **Test**: Schema validation round-trip test (construct + serialize + parse) in `tests/test_architect.py` or a dedicated schema test.
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: `BeatSheet` schema (F02.1, done), `ViralTemplate` schema (F03.2).
 
 ## F04.2: Native ADK Architect Agent
 - **Behavior**: Gemini-backed agent producing a `Blueprint` from `BeatSheet` + creative brief + templates, enforcing structured JSON output exactly like `DeconstructorAgent`.
 - **Process**: Create `backend/agents/architect.py` mirroring `backend/agents/deconstructor.py` (ADC init via `aiplatform.init`, dynamic import of `GenerativeModel`/`GenerationConfig`, `response_schema` matching `Blueprint`). `async def align_structure(beat_sheet: BeatSheet, creative_brief: str) -> Blueprint` internally calls the F03.3 `fetch_viral_templates` wrapper for context before prompting Gemini.
 - **Test**: `tests/test_architect.py` — same mocking pattern as `test_deconstructor.py` (mock `aiplatform.init`, `GenerativeModel`, and the MCP fetch wrapper).
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F04.1, F03.3.
 
 ## F04.3: Architect API Endpoint
 - **Behavior**: Expose the Architect over FastAPI so downstream consumers and integration tests can call it.
 - **Process**: Add `POST /api/v1/architect` in `backend/main.py` accepting `{ beat_sheet: BeatSheet, creative_brief: str }`, instantiate `ArchitectAgent`, return `Blueprint`, following the exact pattern of `/api/v1/deconstruct`.
 - **Test**: Extend `tests/test_architect.py` with a `TestClient` call to `POST /api/v1/architect`, mocked dependencies, asserting 200 + schema match.
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F04.2.
 
 ## F05: Agent Topology (The Director)
