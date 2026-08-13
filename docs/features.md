@@ -98,26 +98,27 @@
 ## F05: Agent Topology (The Director)
 - **Behavior**: Transforms a `Blueprint` into tangible production assets — TTS script and Imagen 3 visual prompts, plus production metadata. Actual TTS audio synthesis / Imagen 3 image generation calls are OUT of scope; only structured prompt/script text generation is produced.
 - **Verification**: `pytest tests/test_director.py` (mocked Gemini, no live TTS/Imagen calls).
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F04 (Blueprint schema + Architect producing it).
+- **Evidence**: `docs/adr/0005-director-agent-production-assets.md`, `backend/schemas/production_assets.py`, `backend/agents/director.py`, `POST /api/v1/produce` in `backend/main.py`; `tests/test_director.py` and `make check` pass cleanly.
 
 ## F05.1: Production Asset Pydantic Schema
 - **Behavior**: Strict schema for the final deliverables handed to production tooling.
 - **Process**: Create `backend/schemas/production_assets.py` with a `ProductionAssets` model (e.g. `tts_script: list[TTSLine{speaker, text, timestamp}]`, `visual_prompts: list[ImagePrompt{scene_id, prompt_text, style_tags: list[str]}]`, `metadata: dict[str, str]`).
 - **Test**: Schema validation round-trip test, same convention as F04.1.
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F04.1 (`Blueprint` schema to consume as input).
 
 ## F05.2: Native ADK Director Agent
 - **Behavior**: Gemini-backed agent producing `ProductionAssets` from a `Blueprint`, enforcing structured JSON output.
 - **Process**: Create `backend/agents/director.py` mirroring the `deconstructor.py`/`architect.py` pattern; `async def produce_assets(blueprint: Blueprint) -> ProductionAssets`.
 - **Test**: `tests/test_director.py` — same mocked-Gemini pattern as existing agent tests.
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F05.1, F04 (Architect producing Blueprint).
 
 ## F05.3: Produce API Endpoint
 - **Behavior**: Expose the Director over FastAPI.
 - **Process**: Add `POST /api/v1/produce` in `backend/main.py` accepting `Blueprint`, returning `ProductionAssets`, same pattern as the other two routes.
 - **Test**: Extend `tests/test_director.py` with a `TestClient` call, mocked dependencies.
-- **State**: todo
+- **State**: passing
 - **Prerequisite**: F05.2.

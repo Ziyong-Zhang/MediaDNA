@@ -4,8 +4,10 @@ from pydantic import BaseModel, Field
 
 from backend.agents.architect import ArchitectAgent
 from backend.agents.deconstructor import DeconstructorAgent
+from backend.agents.director import DirectorAgent
 from backend.schemas.beat_sheet import BeatSheet
 from backend.schemas.blueprint import Blueprint
+from backend.schemas.production_assets import ProductionAssets
 
 app = FastAPI(title="MediaDNA Backend")
 
@@ -58,4 +60,11 @@ async def align_structure(payload: ArchitectRequest) -> Blueprint:
     """Map a reference BeatSheet and creative brief onto a structural Blueprint."""
     agent = ArchitectAgent()
     return await agent.align_structure(payload.beat_sheet, payload.creative_brief)
+
+
+@app.post("/api/v1/produce", response_model=ProductionAssets)
+async def produce_assets(payload: Blueprint) -> ProductionAssets:
+    """Transform a structural Blueprint into TTS script and Imagen 3 visual prompt assets."""
+    agent = DirectorAgent()
+    return await agent.produce_assets(payload)
 

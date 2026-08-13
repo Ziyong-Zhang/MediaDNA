@@ -1,3 +1,15 @@
+## [2026-08-13] - F05 Execution
+- Wrote `docs/adr/0005-director-agent-production-assets.md` documenting the Director agent design before implementation (explicitly scoping out real TTS/Imagen 3 calls — text-only asset generation).
+- Added the `ProductionAssets` schema (`backend/schemas/production_assets.py`): `tts_script` (`TTSLine`), `visual_prompts` (`ImagePrompt`), `metadata`.
+- Implemented `DirectorAgent` (`backend/agents/director.py`) mirroring the Deconstructor/Architect Gemini structured-output pattern; input is a `Blueprint` only (no MCP/ClickHouse dependency).
+- Added `POST /api/v1/produce` in `backend/main.py`.
+- Added `tests/test_director.py` (mocked Gemini, no live calls). `make check` passes cleanly (9 tests total). F05, F05.1, F05.2, F05.3 marked passing in `docs/features.md`.
+- With F02 (Deconstructor), F04 (Architect), and F05 (Director) complete, the full Deconstruct → Align → Produce pipeline described in `docs/ARCHITECTURE.md` is implemented end-to-end (each stage independently callable via its own FastAPI route).
+
+**Next Steps**:
+- No further backend agent tasks currently planned in `docs/features.md`; next candidate work is wiring the Streamlit frontend (`frontend/app.py`) to the three real endpoints (`/api/v1/deconstruct`, `/api/v1/architect`, `/api/v1/produce`) instead of only the health check — not yet scoped as a formal feature.
+- ClickHouse Cloud `viral_templates` table still needs to be provisioned/populated externally before live (non-mocked) MCP calls will work end-to-end.
+
 ## [2026-08-13] - F04 Execution
 - Wrote `docs/adr/0004-architect-agent-blueprint.md` documenting the Architect agent design before implementation.
 - Added the `Blueprint` schema (`backend/schemas/blueprint.py`): `adapted_beat_sheet`, `structural_alignment_notes`, `creative_deviations`.
