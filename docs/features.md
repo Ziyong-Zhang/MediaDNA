@@ -24,19 +24,19 @@
 ## F02: Agent Topology (The Deconstructor)
 - **Behavior**: Implement the first multimodal agent using Native GCP ADK (`LangchainAgent`) and Gemini 1.5 Pro to parse media and output a structured JSON Beat Sheet.
 - **Verification**: `pytest tests/test_agents.py` (with mocked Gemini response).
-- **State**: todo
+- **State**: passing
 
 ## F02.1: Beat Sheet Pydantic Schema
 - **Behavior**: Define a strict Pydantic v2 schema (`BeatSheet`) in `backend/schemas/beat_sheet.py` capturing hook, pacing, and key events.
-- **State**: todo
+- **State**: passing
 
 ## F02.2: Native ADK Agent Initialization
 - **Behavior**: Create `backend/agents/deconstructor.py` wrapping Gemini 1.5 Pro via ADK. Enforce JSON output matching the Pydantic schema using structured outputs.
-- **State**: todo
+- **State**: passing
 
 ## F02.3: Deconstruct API Endpoint
 - **Behavior**: Add `POST /api/v1/deconstruct` in FastAPI to route incoming text/media to The Deconstructor and return the parsed JSON.
-- **State**: todo
+- **State**: passing
 
 ## F03: Data Layer Gateway (ClickHouse MCP)
 - **Behavior**: Build an MCP (Model Context Protocol) server to securely query ClickHouse Cloud using standard HTTP/HTTPS without exposing raw DB connections to the agent logic.

@@ -1,3 +1,13 @@
+## [2026-08-13] - F02 Execution
+- Completed the Pydantic v2 data contract (`BeatSheet`) in `backend/schemas/beat_sheet.py`, capturing hook, pacing, and key events.
+- Initialized the Native ADK Agent (`LangchainAgent`) in `backend/agents/deconstructor.py`, wrapping Gemini 1.5 Pro with structured JSON output enforced against the Beat Sheet schema.
+- Implemented strictly mocked `pytest` implementations to validate agent behavior without live GCP calls.
+
+**Next Steps**:
+- Transition to F03: Build the Data Layer Gateway (ClickHouse MCP).
+- Set up the MCP server skeleton in `backend/mcp/server.py`.
+- Define a `get_viral_templates` tool with a lightweight ClickHouse HTTP client.
+
 ## [2026-12-08] - F01 Execution
 - Verified FastAPI Application Shell (F01.1) and marked it as passing.
 - Developed Streamlit Frontend Shell (F01.2) in `frontend/app.py` with wide layout, title, agent modes placeholder, reference media upload / text area inputs, and backend connection test capability.
