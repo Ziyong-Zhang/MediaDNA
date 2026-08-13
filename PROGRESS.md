@@ -1,3 +1,13 @@
+## [2026-08-13] - F06 Planning
+- Formalized a "Three-Tier Termination Check" verification policy in `docs/features.md` (Tier 1: ruff+mypy static analysis; Tier 2: actual runtime execution — pytest / `streamlit.testing.v1.AppTest`; Tier 3: system-level end-to-end correctness). No task may be marked `passing` without evidence at all three tiers going forward.
+- Wrote `docs/adr/0006-frontend-backend-integration.md` documenting the frontend integration design before implementation: `frontend/api_client.py` as the sole HTTP seam, `st.session_state` for pipeline state, `AppTest` for Tier 2, `TestClient`-backed real backend for Tier 3.
+- Planned F06 (Frontend-Backend Integration) sub-tasks in `docs/features.md`: F06.1 API client layer, F06.2/F06.3/F06.4 per-stage UI wiring (Deconstructor/Architect/Director), F06.5 full-pipeline end-to-end verification. All currently `todo`.
+
+**Next Steps**:
+- Implement F06.1: `frontend/api_client.py` + `tests/test_frontend_api_client.py` (Tier 1/2/3).
+- Then F06.2 → F06.3 → F06.4 UI wiring, each gated by all three verification tiers before moving on (WIP=1).
+- Finish with F06.5 full-pipeline end-to-end test.
+
 ## [2026-08-13] - F05 Execution
 - Wrote `docs/adr/0005-director-agent-production-assets.md` documenting the Director agent design before implementation (explicitly scoping out real TTS/Imagen 3 calls — text-only asset generation).
 - Added the `ProductionAssets` schema (`backend/schemas/production_assets.py`): `tts_script` (`TTSLine`), `visual_prompts` (`ImagePrompt`), `metadata`.
