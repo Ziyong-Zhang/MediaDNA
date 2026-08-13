@@ -37,6 +37,16 @@ make auth
 make check
 ```
 
+### 4. Run the App
+In one terminal, start the backend:
+```bash
+make run-backend
+```
+In another terminal, start the frontend (defaults to pointing at `http://localhost:8000`; override with the `BACKEND_URL` env var):
+```bash
+make run-frontend
+```
+
 ## 📜 Documentation
 
 - [Architecture Overview](docs/ARCHITECTURE.md)

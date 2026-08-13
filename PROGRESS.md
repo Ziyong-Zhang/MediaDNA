@@ -1,3 +1,21 @@
+## [2026-08-13] - Session Exit Checklist
+- **Build/lint**: `make check` passes cleanly (ruff + mypy --strict + pytest, 19 tests, 0 failures).
+- **Tests**: All 19 tests pass, covering unit (mocked), integration (FastAPI `TestClient`), and system-level (live `uvicorn` + `AppTest`) tiers per the Three-Tier Termination Check policy in `docs/features.md`.
+- **Feature list**: `docs/features.md` is fully up to date — F01 through F06 (and every sub-task) are `passing`; no `todo` items remain. Next work is unscoped (see below), so there is nothing pending in the WIP=1 queue.
+- **Debug code**: Scanned `backend/` and `frontend/` for `TODO`/`FIXME`/`print(`/`debugger`/`pdb.set_trace` — none found.
+- **Standard startup path**: Added `make run-backend` (`uvicorn backend.main:app --reload --port 8000`) and `make run-frontend` (`streamlit run frontend/app.py`), documented in `README.md`. Smoke-tested `make run-backend` live: server boots and `GET /health` returns 200.
+- **Repo state**: Working tree clean, all commits pushed to `origin/main` (HEAD at `2092e44` plus this housekeeping commit).
+
+**Where things stand**: The full MediaDNA agent pipeline is implemented and verified end-to-end — Streamlit UI (`frontend/app.py`) → `frontend/api_client.py` → FastAPI (`backend/main.py`: `/api/v1/deconstruct`, `/api/v1/architect`, `/api/v1/produce`) → Deconstructor/Architect/Director agents (`backend/agents/`) → ClickHouse MCP tool (`backend/mcp/`, used by the Architect). All of this is verified with **mocked Gemini** (no live GCP calls in tests) and a **real in-process ClickHouse HTTP client** that is only exercised against mocked HTTP responses in tests (no live ClickHouse table exists yet).
+
+**Known gaps / blockers for a fully live demo (not yet scoped as features)**:
+1. No real ClickHouse Cloud `viral_templates` table is provisioned — `get_viral_templates` only has mocked test coverage; live calls will hit `ClickHouseConfigError` or connection failures until the table + credentials are real.
+2. `make auth` (real GCP ADC) has not been exercised in this session — agents will fail against real Vertex AI until valid credentials are set up.
+3. `frontend/app.py`'s file-upload input mode is intentionally left unwired (only text transcripts flow through the pipeline); a `st.warning` explains this in the UI.
+4. Minor pre-existing env var naming mismatch: `.env.example` defines `GCP_PROJECT_ID` but `backend/agents/*.py` reads `GCP_PROJECT` — not yet reconciled.
+
+**Next Steps for the next session**: No feature is currently `in-progress` (WIP=0). Pick one of the unscoped follow-ups above, plan it in `docs/features.md` with an ADR first (next number: `0007`), then implement following the established pattern (ADR → sub-tasks → Three-Tier Termination Check → update `docs/features.md`/`PROGRESS.md` → one atomic commit).
+
 ## [2026-08-13] - F06 Execution
 - Implemented `frontend/api_client.py` (F06.1): `deconstruct()`, `architect()`, `produce()`, `health()`, all raising `BackendError`; sole HTTP seam under `frontend/`.
 - Rewrote `frontend/app.py` (F06.2-F06.4) to chain the three stages through `st.session_state`: Deconstructor → Architect → Director, each gated on the previous stage's output existing.

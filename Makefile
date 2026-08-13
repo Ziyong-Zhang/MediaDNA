@@ -1,4 +1,4 @@
-.PHONY: setup auth test lint check
+.PHONY: setup auth test lint check run-backend run-frontend
 
 setup:
 	uv sync --no-install-project --quiet
@@ -14,3 +14,9 @@ lint:
 	uv run mypy . --strict
 
 check: lint test
+
+run-backend:
+	PYTHONPATH=. uv run uvicorn backend.main:app --reload --port 8000
+
+run-frontend:
+	PYTHONPATH=. uv run streamlit run frontend/app.py
