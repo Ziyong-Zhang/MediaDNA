@@ -64,24 +64,24 @@ def mocked_gemini_pipeline(beat_sheet_json: str, blueprint_json: str, assets_jso
     Dispatches on distinctive substrings in each agent's prompt (see deconstructor.py/
     architect.py/director.py) since all three agents share the same mocked model instance.
     """
-    mock_model = MagicMock()
+    mock_client = MagicMock()
 
-    def _fake_generate_content(prompt: str, generation_config: Any = None) -> MagicMock:
+    async def _fake_generate_content(*, model: str, contents: str, config: Any = None) -> MagicMock:
         response = MagicMock()
-        if "Reference Beat Sheet" in prompt:
+        if "Reference Beat Sheet" in contents:
             response.text = blueprint_json
-        elif "Blueprint:" in prompt:
+        elif "Blueprint:" in contents:
             response.text = assets_json
         else:
             response.text = beat_sheet_json
         return response
 
-    mock_model.generate_content.side_effect = _fake_generate_content
+    mock_client.aio.models.generate_content = AsyncMock(side_effect=_fake_generate_content)
 
     with (
-        patch("google.cloud.aiplatform.init"),
-        patch("vertexai.generative_models.GenerativeModel", return_value=mock_model),
-        patch("vertexai.generative_models.GenerationConfig"),
+        patch("backend.agents.deconstructor.genai.Client", return_value=mock_client),
+        patch("backend.agents.architect.genai.Client", return_value=mock_client),
+        patch("backend.agents.director.genai.Client", return_value=mock_client),
         patch("backend.agents.architect.fetch_viral_templates", new=AsyncMock(return_value=[])),
     ):
         yield

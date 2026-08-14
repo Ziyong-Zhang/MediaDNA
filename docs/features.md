@@ -243,10 +243,10 @@ No task may be marked `passing` until all three tiers below are satisfied and th
 **Behavior**: Execute real GCP authentication setup.
 **Process**: Run `make auth` to configure ADC for real Vertex AI API calls.
 **Test**: (Tier 1) ADC credential file exists and is readable.
-**State**: `todo`
+**State**: `passing`
 
 **Subtask F09.2: Live Gemini Execution Mode**
-**Behavior**: Run the dashboard with actual Gemini 1.5 Pro/Flash calls (no mocks).
+**Behavior**: Run the dashboard with actual Gemini 2.5 Flash calls (no mocks).
 **Process**: Set environment variables to disable test mocks, run `make run-backend` and `make run-frontend`, verify live calls to Gemini and ClickHouse.
 **Test**: (Tier 3) Input a text prompt into Streamlit, observe live agent outputs and correctly rendered Production Assets.
 **State**: `todo`

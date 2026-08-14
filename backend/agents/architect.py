@@ -2,7 +2,8 @@ import json
 import os
 from typing import Any
 
-from google.cloud import aiplatform
+from google import genai
+from google.genai import types
 
 from backend.mcp.client import fetch_viral_templates
 from backend.schemas.beat_sheet import BeatSheet
@@ -42,8 +43,7 @@ class ArchitectAgent:
         """
         self.project_id: str = os.getenv("GCP_PROJECT", "mediadna-test")
         self.location: str = os.getenv("GCP_LOCATION", "us-central1")
-
-        aiplatform.init(project=self.project_id, location=self.location)
+        self.client = genai.Client(enterprise=True, project=self.project_id, location=self.location)
 
     async def align_structure(self, beat_sheet: BeatSheet, creative_brief: str) -> Blueprint:
         """Map a reference Beat Sheet and creative brief onto a structural Blueprint.
@@ -58,11 +58,6 @@ class ArchitectAgent:
         Returns:
             A populated Blueprint model.
         """
-        from vertexai.generative_models import (
-            GenerationConfig,
-            GenerativeModel,
-        )
-
         templates = await fetch_viral_templates()
         templates_summary = "\n".join(
             f"- [{template.pattern_type}] {template.description} (source: {template.source_ref})" for template in templates
@@ -78,25 +73,23 @@ class ArchitectAgent:
             f"Known Viral Structure Patterns:\n{templates_summary or 'None available'}"
         )
 
-        model = GenerativeModel("gemini-1.5-pro")
-
-        generation_config = GenerationConfig(
-            response_mime_type="application/json",
-            response_schema={
-                "type": "OBJECT",
-                "properties": {
-                    "adapted_beat_sheet": _BEAT_SHEET_SCHEMA,
-                    "structural_alignment_notes": {"type": "ARRAY", "items": {"type": "STRING"}},
-                    "creative_deviations": {"type": "ARRAY", "items": {"type": "STRING"}},
+        response = await self.client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema={
+                    "type": "OBJECT",
+                    "properties": {
+                        "adapted_beat_sheet": _BEAT_SHEET_SCHEMA,
+                        "structural_alignment_notes": {"type": "ARRAY", "items": {"type": "STRING"}},
+                        "creative_deviations": {"type": "ARRAY", "items": {"type": "STRING"}},
+                    },
+                    "required": ["adapted_beat_sheet", "structural_alignment_notes", "creative_deviations"],
                 },
-                "required": ["adapted_beat_sheet", "structural_alignment_notes", "creative_deviations"],
-            },
+            ),
         )
 
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config,
-        )
-
-        response_dict: dict[str, Any] = json.loads(response.text)
+        response_text = response.text or ""
+        response_dict: dict[str, Any] = json.loads(response_text)
         return Blueprint.model_validate(response_dict)

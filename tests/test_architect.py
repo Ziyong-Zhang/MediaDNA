@@ -17,8 +17,8 @@ def client() -> Generator[TestClient, None, None]:
 
 def test_architect_alignment_success(client: TestClient) -> None:
     """Test the /api/v1/architect endpoint with mocked Gemini/VertexAI response and mocked MCP fetch."""
-    with patch("google.cloud.aiplatform.init") as mock_init:
-        mock_model_instance = MagicMock()
+    with patch("backend.agents.architect.genai.Client") as mock_client_factory:
+        mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.text = (
             '{"adapted_beat_sheet": {'
@@ -34,17 +34,14 @@ def test_architect_alignment_success(client: TestClient) -> None:
             '"structural_alignment_notes": ["Preserved the fast cold open"], '
             '"creative_deviations": ["Swapped the climax setting per creative brief"]}'
         )
-        mock_model_instance.generate_content.return_value = mock_response
+        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+        mock_client_factory.return_value = mock_client
 
         canned_templates = [
             ViralTemplate(pattern_id="p1", pattern_type="hook", description="Cold open hook", source_ref="video-123")
         ]
 
-        with (
-            patch("vertexai.generative_models.GenerativeModel", return_value=mock_model_instance),
-            patch("vertexai.generative_models.GenerationConfig"),
-            patch("backend.agents.architect.fetch_viral_templates", new=AsyncMock(return_value=canned_templates)),
-        ):
+        with patch("backend.agents.architect.fetch_viral_templates", new=AsyncMock(return_value=canned_templates)):
             response = client.post(
                 "/api/v1/architect",
                 json={
@@ -68,4 +65,4 @@ def test_architect_alignment_success(client: TestClient) -> None:
             assert data["structural_alignment_notes"] == ["Preserved the fast cold open"]
             assert data["creative_deviations"] == ["Swapped the climax setting per creative brief"]
 
-            mock_init.assert_called_once()
+            mock_client_factory.assert_called_once()

@@ -2,7 +2,8 @@ import json
 import os
 from typing import Any
 
-from google.cloud import aiplatform
+from google import genai
+from google.genai import types
 
 from backend.schemas.blueprint import Blueprint
 from backend.schemas.production_assets import ProductionAssets
@@ -38,8 +39,7 @@ class DirectorAgent:
         """
         self.project_id: str = os.getenv("GCP_PROJECT", "mediadna-test")
         self.location: str = os.getenv("GCP_LOCATION", "us-central1")
-
-        aiplatform.init(project=self.project_id, location=self.location)
+        self.client = genai.Client(enterprise=True, project=self.project_id, location=self.location)
 
     async def produce_assets(self, blueprint: Blueprint) -> ProductionAssets:
         """Transform a structural Blueprint into a TTS script and Imagen 3 visual prompts.
@@ -54,11 +54,6 @@ class DirectorAgent:
         Returns:
             A populated ProductionAssets model.
         """
-        from vertexai.generative_models import (
-            GenerationConfig,
-            GenerativeModel,
-        )
-
         prompt: str = (
             "You are a master cinema director turning a structural blueprint into production-ready assets. "
             "Given the adapted Beat Sheet, structural alignment notes, and creative deviations below, "
@@ -66,25 +61,23 @@ class DirectorAgent:
             f"Blueprint:\n{blueprint.model_dump_json()}"
         )
 
-        model = GenerativeModel("gemini-1.5-pro")
-
-        generation_config = GenerationConfig(
-            response_mime_type="application/json",
-            response_schema={
-                "type": "OBJECT",
-                "properties": {
-                    "tts_script": {"type": "ARRAY", "items": _TTS_LINE_SCHEMA},
-                    "visual_prompts": {"type": "ARRAY", "items": _IMAGE_PROMPT_SCHEMA},
-                    "metadata": {"type": "OBJECT"},
+        response = await self.client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema={
+                    "type": "OBJECT",
+                    "properties": {
+                        "tts_script": {"type": "ARRAY", "items": _TTS_LINE_SCHEMA},
+                        "visual_prompts": {"type": "ARRAY", "items": _IMAGE_PROMPT_SCHEMA},
+                        "metadata": {"type": "OBJECT"},
+                    },
+                    "required": ["tts_script", "visual_prompts", "metadata"],
                 },
-                "required": ["tts_script", "visual_prompts", "metadata"],
-            },
+            ),
         )
 
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config,
-        )
-
-        response_dict: dict[str, Any] = json.loads(response.text)
+        response_text = response.text or ""
+        response_dict: dict[str, Any] = json.loads(response_text)
         return ProductionAssets.model_validate(response_dict)
