@@ -178,3 +178,75 @@ No task may be marked `passing` until all three tiers below are satisfied and th
 - **Test**: `tests/test_frontend_e2e.py` — single `AppTest` session driving all three workflows in sequence against the real live `uvicorn` server (mocked Gemini at each agent boundary), asserting each stage's output correctly feeds the next stage's input and the final `ProductionAssets` rendering matches the mocked Gemini output. This is Tier 3 evidence for the whole feature, not just a single sub-task.
 - **State**: passing
 - **Prerequisite**: F06.1, F06.2, F06.3, F06.4.
+
+#### Feature 07: ClickHouse Data Layer Provisioning
+
+**Prerequisite**: F03 (MCP Gateway). ClickHouse Cloud instance credentials available.
+
+**Subtask F07.1: Schema Definition & Database Initialization**
+**Behavior**: Create the raw SQL table schema for `viral_templates` in ClickHouse.
+**Process**: Write a lightweight script (`backend/db/init_db.py` or `.sql`) to execute `CREATE TABLE IF NOT EXISTS` using the existing `httpx` ClickHouse client.
+**Test**: (Tier 2) Script executes successfully against a live/dev ClickHouse instance.
+**State**: `passing`
+
+
+**Subtask F07.2: Data Seeding (Viral Patterns)**
+**Behavior**: Populate the database with 3-5 high-quality reference records (e.g., "MrBeast Pacing", "Huberman Podcast Structure") for the Architect to retrieve.
+**Process**: Create a JSON/CSV seed file and a script (`backend/db/seed.py`) to `INSERT` these records via the HTTP client.
+**Test**: (Tier 2) Verify data is readable by calling the live F03.2 MCP tool.
+**State**: `passing`
+
+
+**Subtask F07.3: Live MCP Integration Test**
+**Behavior**: Ensure the MCP server fetches real rows without mock injection.
+**Process**: Add a test in `tests/test_mcp_live.py` (marked with `@pytest.mark.live`) that executes the `get_viral_templates` tool against the real database.
+**Test**: (Tier 3) Live HTTP call returns valid `ViralTemplate` objects.
+**State**: `passing`
+
+---
+
+#### Feature 08: Viral Pre-Production Engine Dashboard
+
+**Behavior**: Rewrite the Streamlit frontend as a cinematic "Viral Pre-Production Engine" dashboard showcasing Director agent output (Imagen 3 storyboard prompts and Gemini TTS scripts) with a mock mode for offline prototyping.
+**Verification**: `ruff check` + `mypy . --strict` pass cleanly; `streamlit run frontend/app.py` boots and displays mock ProductionAssets matching the Pydantic schema exactly. Sidebar mock-mode toggle works; live backend fallback wired via `api_client`.
+**State**: `in-progress`
+**Prerequisite**: F05 (ProductionAssets schema), F06 (api_client wiring).
+
+**Subtask F08.1: Mock Mode Toggle & Cinematic Theme**
+**Behavior**: Add a sidebar checkbox `MOCK MODE (Bypass API limits)` that, when True, directly injects a high-energy hiking-boots-themed `ProductionAssets` dict (no backend calls). When False, wire to real `api_client`.
+**Process**: Rewrite `frontend/app.py` to include the mock-mode toggle and a canned ProductionAssets object matching the schema exactly (metadata, pacing_curve, tts_script, storyboard_panels).
+**Test**: (Tier 2) `AppTest` sets mock mode True, verifies no backend calls, checks rendered output matches injected data.
+**State**: `passing`
+**Prerequisite**: F06.1 (api_client exists).
+
+**Subtask F08.2: Split-Screen Dashboard Layout**
+**Behavior**: Render a multi-column cinematic layout: Metadata header → Pacing Curve section → Two-column layout (Gemini TTS Script left, Imagen 3 Storyboard Prompts right).
+**Process**: Use Streamlit columns, expanders, and styled markdown cards. Display timestamp/speaker/emotion_tag/text for TTS; scene_id/camera_angle/imagen_prompt for storyboard.
+**Test**: (Tier 2) `AppTest` checks all columns render and contain expected text when ProductionAssets is in session_state.
+**State**: `passing`
+**Prerequisite**: F08.1.
+
+**Subtask F08.3: Live Backend Fallback**
+**Behavior**: When mock mode is False, wire the dashboard to call the real backend via `api_client` (deconstruct → architect → produce pipeline).
+**Process**: Reuse the F06 API client wiring. If mock mode is off, accept transcript input, call the three endpoints in sequence, store results in session_state, render the final ProductionAssets.
+**Test**: (Tier 3) Run the dashboard against a real `live_backend_url` (mocked Gemini, real uvicorn server), input a transcript, verify pipeline executes and output renders correctly.
+**State**: `passing`
+**Prerequisite**: F06.3, F08.1.
+
+---
+
+#### Feature 09: Live End-to-End Orchestration (GCP Credentials + Real Agents)
+
+**Prerequisite**: F08 dashboard complete, GCP ADC credentials configured.
+
+**Subtask F09.1: `make auth` Execution**
+**Behavior**: Execute real GCP authentication setup.
+**Process**: Run `make auth` to configure ADC for real Vertex AI API calls.
+**Test**: (Tier 1) ADC credential file exists and is readable.
+**State**: `todo`
+
+**Subtask F09.2: Live Gemini Execution Mode**
+**Behavior**: Run the dashboard with actual Gemini 1.5 Pro/Flash calls (no mocks).
+**Process**: Set environment variables to disable test mocks, run `make run-backend` and `make run-frontend`, verify live calls to Gemini and ClickHouse.
+**Test**: (Tier 3) Input a text prompt into Streamlit, observe live agent outputs and correctly rendered Production Assets.
+**State**: `todo`

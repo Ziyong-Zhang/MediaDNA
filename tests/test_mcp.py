@@ -47,8 +47,11 @@ def test_get_viral_templates_mocked_success(monkeypatch: pytest.MonkeyPatch) -> 
     for key, value in _ENV_VARS.items():
         monkeypatch.setenv(key, value)
 
+    # Mock response with JSONEachRow format (one JSON object per line)
     mock_response = MagicMock()
-    mock_response.json.return_value = _CANNED_ROWS
+    mock_response.text = (
+        '{"pattern_id":"p1","pattern_type":"hook","description":"Cold open with a question","source_ref":"video-123"}\n'
+    )
     mock_response.raise_for_status.return_value = None
 
     mock_client = AsyncMock()

@@ -17,7 +17,8 @@ dependencies = [
 dev = [
     "pytest",
     "mypy",
-    "ruff"
+    "ruff",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [tool.ruff]

@@ -16,7 +16,7 @@ class DeconstructorAgent:
         Using Google Cloud Application Default Credentials (ADC) for authentication.
         """
         # Ensure that project is set from environment or falls back gracefully
-        self.project_id: str = os.getenv("GCP_PROJECT", "mediadna-test")
+        self.project_id: str = os.getenv("GCP_PROJECT", "media-dna-505118")
         self.location: str = os.getenv("GCP_LOCATION", "us-central1")
         
         # Initialize Vertex AI SDK

@@ -20,10 +20,11 @@ def test_produce_assets_success(client: TestClient) -> None:
         mock_model_instance = MagicMock()
         mock_response = MagicMock()
         mock_response.text = (
-            '{"tts_script": [{"speaker": "Narrator", "text": "Welcome back.", "timestamp": "0:02"}], '
-            '"visual_prompts": [{"scene_id": "scene-1", "prompt_text": "A neon-lit kitchen at night, cinematic", '
-            '"style_tags": ["cinematic", "neon"]}], '
-            '"metadata": {"estimated_duration": "60s", "target_platform": "tiktok"}}'
+            '{"metadata": {"title": "Test Campaign", "target_platform": "tiktok", "estimated_duration": "60s"}, '
+            '"pacing_curve": ["Hook", "Build"], '
+            '"tts_script": [{"speaker": "Narrator", "text": "Welcome back.", "timestamp": "0:02", "emotion_tag": "energetic"}], '
+            '"storyboard_panels": [{"scene_id": "scene-1", "imagen_prompt": "A neon-lit kitchen at night, cinematic", '
+            '"camera_angle": "Wide shot"}]}'
         )
         mock_model_instance.generate_content.return_value = mock_response
 
@@ -46,8 +47,10 @@ def test_produce_assets_success(client: TestClient) -> None:
 
             assert response.status_code == 200
             data = response.json()
-            assert data["tts_script"] == [{"speaker": "Narrator", "text": "Welcome back.", "timestamp": "0:02"}]
-            assert data["visual_prompts"][0]["scene_id"] == "scene-1"
+            assert data["tts_script"] == [
+                {"speaker": "Narrator", "text": "Welcome back.", "timestamp": "0:02", "emotion_tag": "energetic"}
+            ]
+            assert data["storyboard_panels"][0]["scene_id"] == "scene-1"
             assert data["metadata"]["target_platform"] == "tiktok"
 
             mock_init.assert_called_once()

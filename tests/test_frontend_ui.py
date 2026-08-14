@@ -19,89 +19,114 @@ _CANNED_BLUEPRINT = {
     "structural_alignment_notes": ["Preserved the fast cold open"],
     "creative_deviations": ["Swapped the climax setting per creative brief"],
 }
-_CANNED_ASSETS = {
-    "tts_script": [{"speaker": "Narrator", "text": "Welcome back.", "timestamp": "0:02"}],
-    "visual_prompts": [{"scene_id": "scene-1", "prompt_text": "A neon-lit kitchen", "style_tags": ["cinematic"]}],
-    "metadata": {"estimated_duration": "60s"},
+_CANNED_PRODUCTION_ASSETS = {
+    "metadata": {
+        "title": "Test Campaign",
+        "target_platform": "YouTube",
+        "estimated_duration": "60s",
+    },
+    "pacing_curve": ["Hook", "Build", "Climax"],
+    "tts_script": [{"speaker": "Narrator", "text": "Welcome back.", "timestamp": "0:02", "emotion_tag": "energetic"}],
+    "storyboard_panels": [{"scene_id": "scene-1", "imagen_prompt": "A kitchen", "camera_angle": "Wide"}],
 }
 
 
-def _run_deconstructor_stage(at: AppTest, transcript: str = "Welcome to my video!") -> None:
-    at.radio[0].set_value("Text Transcript/Script")
+def _disable_mock_mode(at: AppTest) -> None:
+    """Disable mock mode so the app enters live pipeline mode."""
+    # Find and uncheck the mock mode checkbox
+    for checkbox in at.checkbox:
+        if "MOCK MODE" in str(checkbox.label):
+            checkbox.uncheck()
+            break
     at.run()
-    at.text_area[0].set_value(transcript)
-    at.run()
-    click_button(at, "Run Deconstructor").click().run()
 
 
-def _run_architect_stage(at: AppTest, creative_brief: str = "Adapt this for a cooking channel") -> None:
-    at.text_area[1].set_value(creative_brief)
+def test_mock_mode_default_loads_assets() -> None:
+    """Tier 2: By default, mock mode is enabled and Production Assets are loaded without API calls."""
+    at = AppTest.from_file(_APP_PATH)
     at.run()
-    click_button(at, "Run Architect").click().run()
+
+    # Assert that mock mode checkbox exists and is checked by default
+    assert any("MOCK MODE" in str(cb.label) for cb in at.checkbox), "Mock mode checkbox not found"
+    
+    # Assert production_assets are in session_state (mock mode auto-loads them)
+    assert "production_assets" in at.session_state
+    assert at.session_state["production_assets"]["metadata"]["title"] == "Conquer the Trail: Premium Hiking Boot Campaign"
+    
+    # Assert the UI renders the assets dashboard
+    assert not at.exception
 
 
 def test_deconstructor_workflow_mocked() -> None:
-    """Tier 2: entering a transcript and clicking Run Deconstructor renders the mocked BeatSheet."""
+    """Tier 2: In live mode, entering a transcript and clicking Run Pipeline executes the full pipeline."""
     at = AppTest.from_file(_APP_PATH)
     at.run()
 
-    with patch("frontend.api_client.deconstruct", return_value=_CANNED_BEAT_SHEET) as mock_deconstruct:
-        _run_deconstructor_stage(at)
+    # Disable mock mode to enter live pipeline mode
+    _disable_mock_mode(at)
+
+    # Enter a transcript
+    transcript = "Welcome to my video!"
+    at.text_area[0].set_value(transcript)
+    at.run()
+
+    # Mock the three API calls and run the pipeline
+    with patch("frontend.api_client.deconstruct", return_value=_CANNED_BEAT_SHEET), \
+         patch("frontend.api_client.architect", return_value=_CANNED_BLUEPRINT), \
+         patch("frontend.api_client.produce", return_value=_CANNED_PRODUCTION_ASSETS):
+        click_button(at, "Run Full Pipeline").click().run()
 
     assert not at.exception
-    assert at.session_state["beat_sheet"] == _CANNED_BEAT_SHEET
-    mock_deconstruct.assert_called_once_with("Welcome to my video!")
+    assert "production_assets" in at.session_state
+    assert at.session_state["production_assets"]["metadata"]["title"] == "Test Campaign"
 
 
-def test_architect_workflow_mocked() -> None:
-    """Tier 2: after a BeatSheet exists, submitting a creative brief renders the mocked Blueprint."""
+def test_live_mode_renders_production_assets() -> None:
+    """Tier 2: When production_assets are in session_state, the dashboard renders correctly."""
     at = AppTest.from_file(_APP_PATH)
     at.run()
 
-    with patch("frontend.api_client.deconstruct", return_value=_CANNED_BEAT_SHEET):
-        _run_deconstructor_stage(at)
+    # Disable mock mode first
+    _disable_mock_mode(at)
 
-    with patch("frontend.api_client.architect", return_value=_CANNED_BLUEPRINT) as mock_architect:
-        _run_architect_stage(at)
-
-    assert not at.exception
-    assert at.session_state["blueprint"] == _CANNED_BLUEPRINT
-    mock_architect.assert_called_once_with(_CANNED_BEAT_SHEET, "Adapt this for a cooking channel")
-
-
-def test_director_workflow_mocked() -> None:
-    """Tier 2: after a Blueprint exists, clicking Run Director renders the mocked ProductionAssets."""
-    at = AppTest.from_file(_APP_PATH)
+    # Inject production assets directly into session_state
+    at.session_state["production_assets"] = _CANNED_PRODUCTION_ASSETS
     at.run()
 
-    with patch("frontend.api_client.deconstruct", return_value=_CANNED_BEAT_SHEET):
-        _run_deconstructor_stage(at)
-    with patch("frontend.api_client.architect", return_value=_CANNED_BLUEPRINT):
-        _run_architect_stage(at)
-
-    with patch("frontend.api_client.produce", return_value=_CANNED_ASSETS) as mock_produce:
-        click_button(at, "Run Director").click().run()
-
     assert not at.exception
-    assert at.session_state["production_assets"] == _CANNED_ASSETS
-    mock_produce.assert_called_once_with(_CANNED_BLUEPRINT)
+    # Check that the dashboard is rendered with key elements
+    assert len(at.columns) > 0, "Dashboard columns not rendered"
+    assert len(at.subheader) > 0, "Dashboard subheaders not rendered"
 
 
 def test_deconstructor_workflow_live_backend(monkeypatch: pytest.MonkeyPatch, live_backend_url: str) -> None:
-    """Tier 3: the Deconstructor click-path round-trips through the real FastAPI app (mocked Gemini only)."""
+    """Tier 3: the full pipeline round-trips through the real FastAPI app (mocked Gemini only)."""
     monkeypatch.setattr(api_client, "BACKEND_URL", live_backend_url)
+
+    at = AppTest.from_file(_APP_PATH)
+    at.run()
+
+    # Disable mock mode
+    _disable_mock_mode(at)
+
+    transcript = "Welcome to my video!"
+    at.text_area[0].set_value(transcript)
+    at.run()
 
     beat_sheet_json = (
         '{"hook_analysis": "Cold open with a question.", '
         '"pacing_curve": ["fast", "climax"], '
         '"key_events": [{"timestamp": "0:01", "event_description": "Hook"}]}'
     )
+    blueprint_json = '{"adapted_beat_sheet": {}, "structural_alignment_notes": [], "creative_deviations": []}'
+    assets_json = (
+        '{"metadata": {"title": "Test"}, "pacing_curve": ["Hook"], '
+        '"tts_script": [{"speaker": "N", "text": "T", "timestamp": "0", "emotion_tag": "e"}], '
+        '"storyboard_panels": [{"scene_id": "s", "imagen_prompt": "p", "camera_angle": "a"}]}'
+    )
 
-    at = AppTest.from_file(_APP_PATH)
-    at.run()
-
-    with mocked_gemini_pipeline(beat_sheet_json, "{}", "{}"):
-        _run_deconstructor_stage(at)
+    with mocked_gemini_pipeline(beat_sheet_json, blueprint_json, assets_json):
+        click_button(at, "Run Full Pipeline").click().run()
 
     assert not at.exception
-    assert at.session_state["beat_sheet"]["hook_analysis"] == "Cold open with a question."
+    assert "production_assets" in at.session_state

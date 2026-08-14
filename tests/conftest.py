@@ -18,11 +18,11 @@ from backend.main import app
 
 
 def click_button(at: AppTest, label: str) -> Button:
-    """Find a button by its label in an AppTest session (raises if not found)."""
+    """Find a button by its label (partial match) in an AppTest session (raises if not found)."""
     for b in at.button:
-        if b.label == label:
+        if label.lower() in b.label.lower():
             return b
-    raise AssertionError(f"Button {label!r} not found")
+    raise AssertionError(f"Button with text containing {label!r} not found. Available buttons: {[b.label for b in at.button]}")
 
 
 def _free_port() -> int:

@@ -62,9 +62,10 @@ def test_full_pipeline_against_live_backend_mocked_gemini(monkeypatch: pytest.Mo
         '"creative_deviations": ["changed the setting"]}'
     )
     assets_json = (
-        '{"tts_script": [{"speaker": "Narrator", "text": "Hi.", "timestamp": "0:01"}], '
-        '"visual_prompts": [{"scene_id": "s1", "prompt_text": "A kitchen", "style_tags": ["cinematic"]}], '
-        '"metadata": {"duration": "30s"}}'
+        '{"metadata": {"title": "Test", "target_platform": "YouTube", "estimated_duration": "30s"}, '
+        '"pacing_curve": ["Hook", "Build"], '
+        '"tts_script": [{"speaker": "Narrator", "text": "Hi.", "timestamp": "0:01", "emotion_tag": "energetic"}], '
+        '"storyboard_panels": [{"scene_id": "s1", "imagen_prompt": "A kitchen", "camera_angle": "Wide"}]}'
     )
 
     with mocked_gemini_pipeline(beat_sheet_json, blueprint_json, assets_json):
@@ -74,7 +75,7 @@ def test_full_pipeline_against_live_backend_mocked_gemini(monkeypatch: pytest.Mo
 
     assert beat_sheet["hook_analysis"] == "Cold open with a question."
     assert blueprint["structural_alignment_notes"] == ["kept the cold open"]
-    assert assets["metadata"]["duration"] == "30s"
+    assert assets["metadata"]["estimated_duration"] == "30s"
 
 
 def test_health_mocked_success(monkeypatch: pytest.MonkeyPatch) -> None:
