@@ -22,6 +22,11 @@ def test_architect_alignment_success(client: TestClient) -> None:
         mock_response = MagicMock()
         mock_response.text = (
             '{"adapted_beat_sheet": {'
+            '"title": "Adapted Formula", '
+            '"total_duration": 60, '
+            '"pacing_score": 8.5, '
+            '"beats": [], '
+            '"viral_summary": "Good engagement", '
             '"hook_analysis": "Reworked opening mirrors the reference cold open.", '
             '"pacing_curve": ["fast", "climax"], '
             '"key_events": [{"timestamp": "0:02", "event_description": "New hook"}]'
@@ -44,6 +49,11 @@ def test_architect_alignment_success(client: TestClient) -> None:
                 "/api/v1/architect",
                 json={
                     "beat_sheet": {
+                        "title": "Formula Breakdown",
+                        "total_duration": 60,
+                        "pacing_score": 8.8,
+                        "beats": [],
+                        "viral_summary": "High retention pacing structure.",
                         "hook_analysis": "The video starts with a high-energy transition.",
                         "pacing_curve": ["fast", "slow build", "climax"],
                         "key_events": [{"timestamp": "0:01", "event_description": "Initial transition hook"}],

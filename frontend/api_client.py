@@ -32,8 +32,8 @@ def _post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def deconstruct(content: str) -> dict[str, Any]:
-    """Call POST /api/v1/deconstruct and return the resulting BeatSheet as a dict."""
-    return _post("/api/v1/deconstruct", {"content": content})
+    """Call POST /api/v1/deconstruct with transcript and return the resulting BeatSheet as a dict."""
+    return _post("/api/v1/deconstruct", {"transcript": content})
 
 
 def architect(beat_sheet: dict[str, Any], creative_brief: str) -> dict[str, Any]:

@@ -36,6 +36,11 @@ def test_produce_assets_success(client: TestClient) -> None:
                 "/api/v1/produce",
                 json={
                     "adapted_beat_sheet": {
+                        "title": "Adapted Formula",
+                        "total_duration": 60,
+                        "pacing_score": 8.5,
+                        "beats": [],
+                        "viral_summary": "Good engagement",
                         "hook_analysis": "Reworked opening mirrors the reference cold open.",
                         "pacing_curve": ["fast", "climax"],
                         "key_events": [{"timestamp": "0:02", "event_description": "New hook"}],

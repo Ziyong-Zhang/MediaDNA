@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from backend.agents.architect import ArchitectAgent
 from backend.agents.deconstructor import DeconstructorAgent
 from backend.agents.director import DirectorAgent
-from backend.schemas.beat_sheet import BeatSheet
+from backend.schemas.beat_sheet import BeatSheet, DeconstructRequest
 from backend.schemas.blueprint import Blueprint
 from backend.schemas.production_assets import ProductionAssets
 
@@ -29,12 +29,6 @@ class HealthResponse(BaseModel):
     version: str
 
 
-class DeconstructRequest(BaseModel):
-    """Schema for media deconstruction request."""
-
-    content: str = Field(..., description="Unstructured transcript or script content to deconstruct")
-
-
 class ArchitectRequest(BaseModel):
     """Schema for structural alignment request."""
 
@@ -50,9 +44,9 @@ async def health_check() -> HealthResponse:
 
 @app.post("/api/v1/deconstruct", response_model=BeatSheet)
 async def deconstruct_media(payload: DeconstructRequest) -> BeatSheet:
-    """Deconstruct unstructured media text into a structured BeatSheet."""
+    """Deconstruct media (via reference URL or transcript) into a structured BeatSheet."""
     agent = DeconstructorAgent()
-    return await agent.analyze_media(payload.content)
+    return await agent.extract_beat_sheet(reference_url=payload.reference_url, transcript=payload.transcript)
 
 
 @app.post("/api/v1/architect", response_model=Blueprint)

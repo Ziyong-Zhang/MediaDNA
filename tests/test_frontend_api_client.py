@@ -14,11 +14,21 @@ def test_deconstruct_mocked_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {"hook_analysis": "x", "pacing_curve": ["fast"], "key_events": []}
+    mock_response.json.return_value = {
+        "title": "Test",
+        "total_duration": 60,
+        "pacing_score": 8.0,
+        "beats": [],
+        "viral_summary": "Good",
+        "hook_analysis": "x",
+        "pacing_curve": ["fast"],
+        "key_events": []
+    }
 
     with patch("frontend.api_client.requests.post", return_value=mock_response) as mock_post:
         result = api_client.deconstruct("some transcript")
 
+    assert result["title"] == "Test"
     assert result["hook_analysis"] == "x"
     mock_post.assert_called_once()
 
@@ -51,12 +61,16 @@ def test_full_pipeline_against_live_backend_mocked_gemini(monkeypatch: pytest.Mo
     monkeypatch.setattr(api_client, "BACKEND_URL", live_backend_url)
 
     beat_sheet_json = (
-        '{"hook_analysis": "Cold open with a question.", '
+        '{"title": "Formula Breakdown", "total_duration": 60, "pacing_score": 8.8, '
+        '"beats": [{"timestamp_sec": 0, "hook_type": "Visual Cliffhanger", "visual_cue": "Zoom", '
+        '"audio_cue": "Riser", "emotion_shift": "Anticipation", "retention_driver": "Open Loop"}], '
+        '"viral_summary": "High retention.", "hook_analysis": "Cold open with a question.", '
         '"pacing_curve": ["fast", "climax"], '
         '"key_events": [{"timestamp": "0:01", "event_description": "Hook"}]}'
     )
     blueprint_json = (
-        '{"adapted_beat_sheet": {"hook_analysis": "Adapted hook.", "pacing_curve": ["fast"], '
+        '{"adapted_beat_sheet": {"title": "Adapted", "total_duration": 60, "pacing_score": 8.5, '
+        '"beats": [], "viral_summary": "Good", "hook_analysis": "Adapted hook.", "pacing_curve": ["fast"], '
         '"key_events": [{"timestamp": "0:01", "event_description": "New hook"}]}, '
         '"structural_alignment_notes": ["kept the cold open"], '
         '"creative_deviations": ["changed the setting"]}'
@@ -73,6 +87,7 @@ def test_full_pipeline_against_live_backend_mocked_gemini(monkeypatch: pytest.Mo
         blueprint = api_client.architect(beat_sheet, "Make it a cooking channel twist")
         assets = api_client.produce(blueprint)
 
+    assert beat_sheet["title"] == "Formula Breakdown"
     assert beat_sheet["hook_analysis"] == "Cold open with a question."
     assert blueprint["structural_alignment_notes"] == ["kept the cold open"]
     assert assets["metadata"]["estimated_duration"] == "30s"

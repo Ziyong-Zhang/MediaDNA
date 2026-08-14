@@ -22,10 +22,15 @@ def test_deconstruct_media_success(client: TestClient) -> None:
         mock_model_instance = MagicMock()
         mock_response = MagicMock()
         mock_response.text = (
-            '{"hook_analysis": "The video starts with a high-energy transition.", '
+            '{"title": "Formula Breakdown", '
+            '"total_duration": 60, '
+            '"pacing_score": 8.8, '
+            '"beats": [{"timestamp_sec": 0, "hook_type": "Visual Cliffhanger", "visual_cue": "Rapid zoom on character", '
+            '"audio_cue": "Riser into silence", "emotion_shift": "Anticipation", "retention_driver": "Open Loop"}], '
+            '"viral_summary": "High retention pacing structure.", '
+            '"hook_analysis": "The video starts with a high-energy transition.", '
             '"pacing_curve": ["fast", "slow build", "climax"], '
-            '"key_events": [{"timestamp": "0:01", "event_description": "Initial transition hook"}, '
-            '{"timestamp": "0:15", "event_description": "Body discussion"}]}'
+            '"key_events": [{"timestamp": "0:01", "event_description": "Initial transition hook"}]}'
         )
         mock_model_instance.generate_content.return_value = mock_response
 
@@ -34,15 +39,55 @@ def test_deconstruct_media_success(client: TestClient) -> None:
 
             response = client.post(
                 "/api/v1/deconstruct",
-                json={"content": "Welcome to my video! Here we go. Now we discuss the core concepts. Thanks for watching."}
+                json={
+                    "reference_url": "https://example.com/sample.mp4",
+                    "transcript": "Today we are analyzing the viral formula."
+                }
             )
 
             assert response.status_code == 200
             data = response.json()
+            assert data["title"] == "Formula Breakdown"
+            assert data["total_duration"] == 60
+            assert data["pacing_score"] == 8.8
+            assert len(data["beats"]) == 1
+            assert data["beats"][0]["hook_type"] == "Visual Cliffhanger"
+            assert data["viral_summary"] == "High retention pacing structure."
             assert data["hook_analysis"] == "The video starts with a high-energy transition."
-            assert data["pacing_curve"] == ["fast", "slow build", "climax"]
-            assert len(data["key_events"]) == 2
-            assert data["key_events"][0]["timestamp"] == "0:01"
-            assert data["key_events"][0]["event_description"] == "Initial transition hook"
+            assert len(data["key_events"]) == 1
             
             mock_init.assert_called_once()
+
+
+def test_deconstruct_empty_payload_fails(client: TestClient) -> None:
+    """Test that deconstruct fails with empty payload (validation error)."""
+    response = client.post(
+        "/api/v1/deconstruct",
+        json={}
+    )
+    assert response.status_code == 422  # Pydantic validation error
+
+
+def test_deconstruct_with_transcript_only(client: TestClient) -> None:
+    """Test deconstruct with transcript only (no reference_url)."""
+    with patch("google.cloud.aiplatform.init"):
+        mock_model_instance = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = (
+            '{"title": "Transcript Analysis", "total_duration": 45, "pacing_score": 7.5, '
+            '"beats": [], "viral_summary": "Moderate engagement", '
+            '"hook_analysis": "Strong hook", "pacing_curve": ["fast"], "key_events": []}'
+        )
+        mock_model_instance.generate_content.return_value = mock_response
+
+        with patch("vertexai.generative_models.GenerativeModel", return_value=mock_model_instance), \
+             patch("vertexai.generative_models.GenerationConfig"):
+
+            response = client.post(
+                "/api/v1/deconstruct",
+                json={"transcript": "Just a test transcript"}
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["title"] == "Transcript Analysis"
