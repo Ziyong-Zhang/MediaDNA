@@ -1,6 +1,9 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+load_dotenv()
 
 from backend.agents.architect import ArchitectAgent
 from backend.agents.deconstructor import DeconstructorAgent

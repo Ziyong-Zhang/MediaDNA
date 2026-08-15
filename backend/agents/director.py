@@ -1,9 +1,13 @@
 import json
 import os
+import re
+import logging
 from typing import Any
 
 from google import genai
 from google.genai import types
+from fastapi import HTTPException
+from pydantic import ValidationError
 
 from backend.schemas.blueprint import Blueprint
 from backend.schemas.production_assets import ProductionAssets
@@ -13,21 +17,29 @@ _TTS_LINE_SCHEMA = {
     "properties": {
         "speaker": {"type": "STRING", "description": "Name or role of the speaker delivering this line"},
         "text": {"type": "STRING", "description": "The narration/dialogue text to be synthesized"},
-        "timestamp": {"type": "STRING", "description": "Timestamp for this line (e.g. '0:15' or '00:02:30')"},
+        "timestamp": {"type": "STRING", "description": "Timestamp for this line (e.g., '00:00-00:05')"},
+        "emotion_tag": {"type": "STRING", "description": "Emotion/tone tag to guide Gemini TTS voice tuning"},
     },
-    "required": ["speaker", "text", "timestamp"],
+    "required": ["speaker", "text", "timestamp", "emotion_tag"],
 }
 
-_IMAGE_PROMPT_SCHEMA = {
+_STORYBOARD_PANEL_SCHEMA = {
     "type": "OBJECT",
     "properties": {
-        "scene_id": {"type": "STRING", "description": "Identifier of the scene this prompt corresponds to"},
-        "prompt_text": {"type": "STRING", "description": "Imagen-3-ready visual prompt text"},
-        "style_tags": {"type": "ARRAY", "items": {"type": "STRING"}},
+        "scene_id": {"type": "STRING", "description": "Identifier of the scene this panel corresponds to"},
+        "imagen_prompt": {"type": "STRING", "description": "Highly detailed VFX prompt optimized for Imagen 3"},
+        "camera_angle": {"type": "STRING", "description": "Cinematography instruction (e.g., 'Wide shot, drone pan')"},
     },
-    "required": ["scene_id", "prompt_text", "style_tags"],
+    "required": ["scene_id", "imagen_prompt", "camera_angle"],
 }
 
+def sanitize_json(text: str) -> str:
+    """Remove markdown code fence markers from JSON response text."""
+    cleaned = re.sub(r"^```(?:json)?\s*", "", text.strip())
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+    return cleaned.strip()
+
+logger = logging.getLogger(__name__)
 
 class DirectorAgent:
     """Director agent for transforming a Blueprint into concrete production assets."""
@@ -69,15 +81,31 @@ class DirectorAgent:
                 response_schema={
                     "type": "OBJECT",
                     "properties": {
+                        "metadata": {"type": "OBJECT", "description": "Free-form production metadata"},
+                        "pacing_curve": {
+                            "type": "ARRAY",
+                            "items": {"type": "STRING"},
+                            "description": "Chronological list of emotional or pacing shifts"
+                        },
                         "tts_script": {"type": "ARRAY", "items": _TTS_LINE_SCHEMA},
-                        "visual_prompts": {"type": "ARRAY", "items": _IMAGE_PROMPT_SCHEMA},
-                        "metadata": {"type": "OBJECT"},
+                        "storyboard_panels": {"type": "ARRAY", "items": _STORYBOARD_PANEL_SCHEMA},
                     },
-                    "required": ["tts_script", "visual_prompts", "metadata"],
+                    "required": ["metadata", "pacing_curve", "tts_script", "storyboard_panels"],
                 },
             ),
         )
 
         response_text = response.text or ""
-        response_dict: dict[str, Any] = json.loads(response_text)
-        return ProductionAssets.model_validate(response_dict)
+        cleaned_json = sanitize_json(response_text)
+        
+        try:
+            response_dict: dict[str, Any] = json.loads(cleaned_json)
+            return ProductionAssets.model_validate(response_dict)
+        except (json.JSONDecodeError, ValidationError) as e:
+            logger.error("❌ [DirectorAgent] LLM Output Parsing or Validation Failed!")
+            logger.error(f"Raw LLM Output: {response_text}")
+            logger.error(f"Error: {e}")
+            raise HTTPException(
+                status_code=502, 
+                detail="Director Agent generated an invalid schema or invalid JSON. Please retry."
+            )

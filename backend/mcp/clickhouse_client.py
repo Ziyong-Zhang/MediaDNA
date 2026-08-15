@@ -7,6 +7,9 @@ ClickHouse connection details in source code.
 import os
 
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from backend.schemas.viral_template import ViralTemplate
 

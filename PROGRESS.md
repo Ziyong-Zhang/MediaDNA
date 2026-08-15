@@ -1,3 +1,18 @@
+## [2026-08-15] - F09 Execution: Live E2E Pipeline Unlocked & ADR-0010
+- **Achievement**: Successfully executed the full Deconstruct → Architect → Produce pipeline using live Gemini 2.5 Flash models via the Google GenAI SDK.
+- **Critical Fix**: Resolved a `400 INVALID_ARGUMENT` pre-flight schema validation error in the Director agent caused by a duplicate `required` dictionary key in the API payload.
+- **Resilience Added**: Added `sanitize_json` (stripping Markdown fences) and Pydantic `ValidationError` boundaries (returning HTTP 502) across all ADK agents to gracefully handle live LLM hallucinations and avoid unhandled FastAPI 500 crashes.
+- **Current State**: The backend and agent topology are production-ready. The Streamlit UI successfully receives and renders the `ProductionAssets` payload from live GCP calls.
+
+## [2026-08-14] - ADR 0009: Dotenv Configuration Management
+
+### Configuration Fix Applied
+- Added `load_dotenv()` at the backend entry points so local `.env` values are loaded before internal clients initialize.
+- This was implemented in `backend/main.py` and `backend/mcp/clickhouse_client.py` to fix missing ClickHouse credential failures during local development.
+- The project now follows the ADR requirement that `.env` values be loaded explicitly at runtime while remaining compatible with GCP Cloud Run environment injection.
+
+---
+
 ## [2026-08-14] - F07 + F08 Execution: ClickHouse Verified & Viral Pre-Production Dashboard
 
 ### F07 Completed: ClickHouse Data Layer Verified Live

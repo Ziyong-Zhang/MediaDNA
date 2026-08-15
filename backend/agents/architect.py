@@ -18,9 +18,31 @@ _KEY_EVENT_SCHEMA = {
     "required": ["timestamp", "event_description"],
 }
 
+_BEAT_ITEM_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "timestamp_sec": {"type": "INTEGER", "description": "Timestamp in seconds"},
+        "hook_type": {"type": "STRING", "description": "Type of hook (e.g., 'Visual Cliffhanger')"},
+        "visual_cue": {"type": "STRING", "description": "Visual element description for this beat"},
+        "audio_cue": {"type": "STRING", "description": "Audio element description for this beat"},
+        "emotion_shift": {"type": "STRING", "description": "Emotional shift at this beat"},
+        "retention_driver": {"type": "STRING", "description": "What drives viewer retention at this moment"},
+    },
+    "required": ["timestamp_sec", "hook_type", "visual_cue", "audio_cue", "emotion_shift", "retention_driver"],
+}
+
 _BEAT_SHEET_SCHEMA = {
     "type": "OBJECT",
     "properties": {
+        "title": {"type": "STRING", "description": "Title or name of the analyzed content"},
+        "total_duration": {"type": "INTEGER", "description": "Total duration in seconds"},
+        "pacing_score": {"type": "NUMBER", "description": "Overall pacing score (0.0 to 10.0)"},
+        "beats": {
+            "type": "ARRAY",
+            "items": _BEAT_ITEM_SCHEMA,
+            "description": "Detailed list of beats with hooks and emotional shifts"
+        },
+        "viral_summary": {"type": "STRING", "description": "Summary of viral potential and key retention drivers"},
         "hook_analysis": {"type": "STRING", "description": "Analysis of the hook used to capture viewer attention"},
         "pacing_curve": {
             "type": "ARRAY",
@@ -29,7 +51,7 @@ _BEAT_SHEET_SCHEMA = {
         },
         "key_events": {"type": "ARRAY", "items": _KEY_EVENT_SCHEMA},
     },
-    "required": ["hook_analysis", "pacing_curve", "key_events"],
+    "required": ["title", "total_duration", "pacing_score", "beats", "viral_summary", "hook_analysis", "pacing_curve", "key_events"],
 }
 
 

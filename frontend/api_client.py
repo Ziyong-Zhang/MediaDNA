@@ -20,7 +20,7 @@ class BackendError(RuntimeError):
 def _post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
     url = f"{BACKEND_URL}{path}"
     try:
-        response = requests.post(url, json=payload, timeout=30.0)
+        response = requests.post(url, json=payload, timeout=60.0)
     except requests.RequestException as e:
         raise BackendError(f"Request to {url} failed: {e}") from e
 
