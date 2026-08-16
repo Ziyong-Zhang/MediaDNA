@@ -8,10 +8,8 @@ from frontend.api_client import BackendError
 from tests.conftest import mocked_gemini_pipeline
 
 
-def test_deconstruct_mocked_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tier 2: deconstruct() parses a mocked 200 response into a dict."""
-    monkeypatch.setattr(api_client, "BACKEND_URL", "http://backend.invalid")
-
+def _mock_ok_response() -> MagicMock:
+    """Return a MagicMock response object representing a successful backend call."""
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -22,15 +20,66 @@ def test_deconstruct_mocked_success(monkeypatch: pytest.MonkeyPatch) -> None:
         "viral_summary": "Good",
         "hook_analysis": "x",
         "pacing_curve": ["fast"],
-        "key_events": []
+        "key_events": [],
     }
+    return mock_response
+
+
+def test_deconstruct_mocked_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tier 2: deconstruct() sends multipart form data (no file) and parses a 200 response."""
+    monkeypatch.setattr(api_client, "BACKEND_URL", "http://backend.invalid")
+
+    mock_response = _mock_ok_response()
 
     with patch("frontend.api_client.requests.post", return_value=mock_response) as mock_post:
         result = api_client.deconstruct("some transcript")
 
     assert result["title"] == "Test"
     assert result["hook_analysis"] == "x"
-    mock_post.assert_called_once()
+    mock_post.assert_called_once_with(
+        "http://backend.invalid/api/v1/deconstruct",
+        data={"transcript": "some transcript", "reference_url": None},
+        timeout=60.0,
+    )
+
+
+def test_deconstruct_mocked_success_with_reference_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tier 2: deconstruct() passes reference_url in the multipart form data."""
+    monkeypatch.setattr(api_client, "BACKEND_URL", "http://backend.invalid")
+
+    mock_response = _mock_ok_response()
+
+    with patch("frontend.api_client.requests.post", return_value=mock_response) as mock_post:
+        result = api_client.deconstruct("some transcript", reference_url="https://youtu.be/abc")
+
+    assert result["title"] == "Test"
+    mock_post.assert_called_once_with(
+        "http://backend.invalid/api/v1/deconstruct",
+        data={"transcript": "some transcript", "reference_url": "https://youtu.be/abc"},
+        timeout=60.0,
+    )
+
+
+def test_deconstruct_mocked_success_with_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tier 2: deconstruct() sends file bytes via the `files=` kwarg when a file is provided."""
+    monkeypatch.setattr(api_client, "BACKEND_URL", "http://backend.invalid")
+
+    mock_response = _mock_ok_response()
+
+    with patch("frontend.api_client.requests.post", return_value=mock_response) as mock_post:
+        result = api_client.deconstruct(
+            "some transcript",
+            file_bytes=b"\x00\x01\x02",
+            file_name="clip.mp3",
+        )
+
+    assert result["title"] == "Test"
+    mock_post.assert_called_once_with(
+        "http://backend.invalid/api/v1/deconstruct",
+        data={"transcript": "some transcript"},
+        files={"file": ("clip.mp3", b"\x00\x01\x02")},
+        timeout=60.0,
+    )
 
 
 def test_deconstruct_error_on_non_200(monkeypatch: pytest.MonkeyPatch) -> None:

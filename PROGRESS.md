@@ -1,3 +1,22 @@
+## [2026-08-15] - Subtask F10.3 Completed: Streamlit Multimodal UI & API Seam Wiring
+- **Achievement**: Implemented the Hybrid Multipart Mode (per ADR-0010-3) wiring the Streamlit frontend to the FastAPI backend for both YouTube URLs and raw media uploads.
+- **Backend**: Refactored `POST /api/v1/deconstruct` in `backend/main.py` to use `Annotated[..., Form()]` + `Annotated[UploadFile|None, File()]`, replacing the old Pydantic JSON body. Uploaded files are persisted via `save_uploaded_file` and YouTube URLs via `download_youtube_audio`, with strict `finally`/`try/finally` cleanup of temp files after extraction.
+- **Frontend**: Updated `frontend/api_client.deconstruct()` to dynamically send `requests.post` multipart payloads (`data=` + `files=` for uploads, `data=` with `reference_url` for URLs). Added `st.tabs(["YouTube URL", "Upload File"])` with `st.text_input` and `st.file_uploader` in `frontend/app.py`, and wired the "Run Full Pipeline" button to pass either `reference_url` or `file_bytes`/`file_name`.
+- **Tests**: Updated `tests/test_deconstructor.py`, `tests/test_frontend_api_client.py`, and `tests/test_frontend_ui.py` to use `data=`/`files=` instead of `json=`, with new coverage for file upload cleanup, YouTube URL download cleanup, and the tabbed UI rendering.
+- **Quality**: Verified `32 passed, 1 skipped` on `pytest tests/`, plus clean `ruff check . --fix` and `mypy . --strict`. F10.3 marked `passing` in `docs/features.md`.
+
+## [2026-08-15] - Subtask F10.2 Completed: Gemini File API & Multimodal Beat Sheet Extraction
+- **Achievement**: Upgraded `DeconstructorAgent` to process multimodal media via inline bytes (`types.Part.from_bytes`) instead of remote File API, complying with Vertex AI Enterprise SDK requirements.
+- **Architectural Shift**: Achieved absolute Zero-Retention security by bypassing GCP cloud storage entirely and processing lightweight media directly in memory.
+- **Verification**: Built and verified unit tests (`tests/test_deconstructor.py`) and a permanent live integration test (`tests/test_live_multimodal.py`).
+- **Quality**: Verified 100% clean passes on `pytest -m live`, `ruff check`, and `mypy --strict`.
+
+## [2026-08-15] - Subtask F10.1 Completed: Media Ingestion & Audio Extraction Service
+- **Achievement**: Implemented `backend/services/media_service.py` with robust support for YouTube audio download via `yt-dlp` and raw upload file handling.
+- **Safety Limits**: Enforced 10-minute video duration cap throwing `ValueError` and security considerations for filename path traversal.
+- **Verification**: Built and verified unit tests (`tests/test_media_service.py`) mocking `yt_dlp.YoutubeDL`.
+- **Quality**: Verified 100% clean passes on both `pytest tests/test_media_service.py` and project-wide `make check` (ruff lint and mypy --strict typing validation).
+
 ## [2026-08-15] - F09 Execution: Live E2E Pipeline Unlocked & ADR-0010
 - **Achievement**: Successfully executed the full Deconstruct → Architect → Produce pipeline using live Gemini 2.5 Flash models via the Google GenAI SDK.
 - **Critical Fix**: Resolved a `400 INVALID_ARGUMENT` pre-flight schema validation error in the Director agent caused by a duplicate `required` dictionary key in the API payload.

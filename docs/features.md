@@ -259,62 +259,40 @@ No task may be marked `passing` until all three tiers below are satisfied and th
 **State**: `passing`
 **Evidence**: Handled GenAI SDK strict schema validation; pipeline successfully generated end-to-end assets on August 15.
 
-This is a massive victory. You have successfully navigated the "Valley of Despair" in Agentic AI—the boundary between deterministic code and non-deterministic LLM schemas. By fixing that Google GenAI SDK `400 INVALID_ARGUMENT` error, you have officially unlocked the live E2E pipeline.
+#### Feature 10: Multimodal Reference Ingestion & Analysis (The "Wow" Factor)
 
-Let's execute your two requests exactly as specified.
-
----
-
-### 1. File Updates: `features.md` and `PROGRESS.md`
-
-Copy and paste these specific blocks to update your tracking files.
-
-**Add this to the top of `PROGRESS.md`:**
-
-```markdown
-## [2026-08-15] - F09 Execution: Live E2E Pipeline Unlocked & ADR-0010
-- **Achievement**: Successfully executed the full Deconstruct → Architect → Produce pipeline using live Gemini 2.5 Flash models via the Google GenAI SDK.
-- **Critical Fix**: Resolved a `400 INVALID_ARGUMENT` pre-flight schema validation error in the Director agent caused by a duplicate `required` dictionary key in the API payload.
-- **Resilience Added**: Implemented `docs/adr/0010-unified-agent-error-boundaries.md`. Added `sanitize_json` (stripping Markdown fences) and Pydantic `ValidationError` boundaries (returning HTTP 502) across all ADK agents to gracefully handle live LLM hallucinations and avoid unhandled FastAPI 500 crashes.
-- **Current State**: The backend and agent topology are production-ready. The Streamlit UI successfully receives and renders the `ProductionAssets` payload from live GCP calls.
-- **Next Steps**: Execute data seeding for ClickHouse (`backend/db/seed.py`) to provide real RAG context, and polish the Streamlit UI to visualize the output cinematically.
-
-```
-
-**Update these specific sections in `docs/features.md` (Replace the existing F08.3 and F09.2 sections):**
-
-```markdown
-**Subtask F08.3: Live Backend Fallback**
-**Behavior**: When mock mode is False, wire the dashboard to call the real backend via `api_client` (deconstruct → architect → produce pipeline).
-**Process**: Reuse the F06 API client wiring. If mock mode is off, accept transcript input, call the three endpoints in sequence, store results in session_state, render the final ProductionAssets.
-**Test**: (Tier 3) Run the dashboard against a real `live_backend_url` (live Gemini models), input a transcript, verify pipeline executes and output renders correctly.
-**State**: `passing`
-**Evidence**: Successfully received and rendered real `ProductionAssets` payload from the live backend.
-
-**Subtask F09.2: Live Gemini Execution Mode**
-**Behavior**: Run the dashboard with actual Gemini 2.5 Flash calls (no mocks).
-**Process**: Set environment variables to disable test mocks, run `make run-backend` and `make run-frontend`, verify live calls to Gemini and ClickHouse.
-**Test**: (Tier 3) Input a text prompt into Streamlit, observe live agent outputs and correctly rendered Production Assets without 500/502 errors.
-**State**: `passing`
-**Evidence**: Handled GenAI SDK strict schema validation; pipeline successfully generated end-to-end assets on August 15.
-
-```
+**Behavior**: Allow creators to submit raw media (YouTube URLs or uploaded `.mp4`/`.mp3` files). The system automatically downloads/extracts audio, uploads it via Google GenAI File API, and instructs the Deconstructor Agent (Gemini 1.5 Pro / Gemini 2.5 Flash) to parse visual and acoustic cues directly into the structured `BeatSheet`.
+**Verification**: `make check` clean (Ruff + Mypy --strict), unit tests with mocked `yt-dlp` and `client.files`, and a live integration test processing a real short clip.
+**State**: `in-progress`
+**Prerequisite**: F02 (Deconstructor), F08 (Dashboard UI), F09 (Live E2E).
 
 ---
 
-### 2. Feature Brainstorming: The Road to Winning the Hackathon
+**Subtask F10.1: Media Ingestion & Audio Extraction Service**
+- **Behavior**: A dedicated backend service (`backend/services/media_service.py`) that accepts either a YouTube URL or raw file bytes, enforces a maximum duration constraint (e.g., max 10 minutes to prevent token exhaustion), extracts a lightweight audio track (`.mp3`/`.m4a`), and returns a temporary local file path with automatic cleanup.
+- **Process**: Add `yt-dlp` to `pyproject.toml`. Implement `download_youtube_audio(url: str) -> Path` and `save_uploaded_file(file_bytes: bytes, filename: str) -> Path`. Wrap operations with defensive timeout and format checking.
+- **Test**: (Tier 2) `tests/test_media_service.py` verifying file creation, duration limit rejection, and temp file cleanup with mocked `yt_dlp.YoutubeDL`.
+- **State**: `passing`
+- **Prerequisite**: None.
 
-Now that our core structural logic (Text -> Agent -> Blueprint) is working, we need to focus on what wins Hackathons: **Visual Impact, "Wow" Factor, and Deep Partner Integration.** Based on the Devpost guidelines (Imagen 3, Lyria, Gemini 1.5 Pro Multimodal, ClickHouse MCP), here is the prioritized roadmap for the remaining features.
+---
 
-#### Feature 10: Multimodal Input Processing (The "Wow" Factor)
+**Subtask F10.2: Gemini File API & Multimodal Beat Sheet Extraction**
+- **Behavior**: Upgrade `DeconstructorAgent.extract_beat_sheet()` to support media file paths using inline bytes for Vertex AI compatibility.
+- **Process**: Modify `backend/agents/deconstructor.py` to accept `media_path: Path | None`. Integrate asynchronous file reading and `types.Part.from_bytes`.
+- **Test**: (Tier 2/3) `tests/test_deconstructor.py` and `tests/test_live_multimodal.py` asserting accurate multimodal prompt assembly.
+- **State**: `passing`
+- **Prerequisite**: F10.1.
 
-Right now, we only accept text transcripts. But the Deconstructor must analyze actual video/audio.
+---
 
-* **Behavior**: Allow users to paste a YouTube URL or upload a `.mp4` file. The backend extracts the audio/frames and uses Gemini 1.5 Pro's native multimodal capabilities to analyze the raw media.
-* **Subtasks**:
-* **F10.1: Media Ingestion Layer**: Add `yt-dlp` or a lightweight video processor to download/extract audio from user-provided URLs in FastAPI.
-* **F10.2: Gemini 1.5 Pro Multimodal Call**: Update `DeconstructorAgent` to upload the media file to the Google GenAI File API, then pass the file URI to the prompt instead of just text.
-* **F10.3: UI Upload Component**: Add `st.file_uploader` and a URL input field in Streamlit.
+**Subtask F10.3: Streamlit Multimodal UI & API Seam Wiring**
+- **Behavior**: Upgrade the Streamlit UI to offer a dual-input tab: "YouTube URL" and "Upload Video/Audio File", wired through `frontend/api_client.py` and the FastAPI `/api/v1/deconstruct` endpoint using multipart form data or URL passing.
+- **Process**: Update `backend/main.py` route `/api/v1/deconstruct` to support media ingestion. Update `frontend/api_client.py` and `frontend/app.py` with `st.file_uploader` and `st.text_input` widgets.
+- **Test**: (Tier 2/3) `AppTest` verifying both upload and URL triggers render the Deconstructor output and progress to the Architect stage.
+- **State**: `passing`
+- **Prerequisite**: F10.1, F10.2.
+- **Evidence**: `backend/main.py` `/api/v1/deconstruct` now accepts `Annotated[UploadFile|None, File()]` + `Form()` fields, using `save_uploaded_file`/`download_youtube_audio` with strict `finally` cleanup; `frontend/api_client.deconstruct()` sends `files=`/`data=` multipart payloads; `frontend/app.py` offers `st.tabs(["YouTube URL", "Upload File"])` with `st.text_input` and `st.file_uploader`. Verified `32 passed, 1 skipped` on `pytest tests/`, plus clean `ruff check . --fix` and `mypy . --strict`.
 
 
 #### Feature 11: Real Asset Synthesis (The Hollywood Finish)

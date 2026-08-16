@@ -152,36 +152,61 @@ if mock_mode:
 else:
     # Live mode: Wire to backend
     st.header("📝 Step 1: Deconstruction Pipeline")
-    
-    # Input transcript
+
+    # Input transcript (optional text content for the agent prompt)
     transcript_text: str = st.text_area(
-        "Enter reference transcript or script content",
+        "Additional Context or Transcript (Optional)",
         height=200,
         placeholder="Paste your video/audio transcript or creative script here...",
     )
-    
+
+    # Reference media input via tabs
+    st.markdown("### Reference Media (Optional)")
+    tab1, tab2 = st.tabs(["YouTube URL", "Upload File"])
+
+    with tab1:
+        youtube_url: str = st.text_input("YouTube URL", key="youtube_url")
+
+    with tab2:
+        uploaded_file = st.file_uploader(
+            "Upload media file (.mp3, .m4a, .mp4)",
+            type=["mp3", "m4a", "mp4"],
+        )
+
     # Run full pipeline
     if st.button("🚀 Run Full Pipeline (Deconstruct → Architect → Produce)", type="primary"):
-        if not transcript_text:
-            st.error("Please enter a transcript to proceed.")
+        if not transcript_text and not youtube_url and uploaded_file is None:
+            st.error("Please provide a transcript, a YouTube URL, or an uploaded media file to proceed.")
         else:
             try:
                 with st.spinner("🔄 Deconstructing reference media..."):
-                    beat_sheet_data = api_client.deconstruct(transcript_text)
-                
+                    if uploaded_file is not None:
+                        beat_sheet_data = api_client.deconstruct(
+                            transcript_text,
+                            file_bytes=uploaded_file.getvalue(),
+                            file_name=uploaded_file.name,
+                        )
+                    elif youtube_url:
+                        beat_sheet_data = api_client.deconstruct(
+                            transcript_text,
+                            reference_url=youtube_url,
+                        )
+                    else:
+                        beat_sheet_data = api_client.deconstruct(transcript_text)
+
                 with st.spinner("🎨 Architecting creative blueprint..."):
                     creative_brief = st.text_input(
                         "Creative Brief (for this demo session)",
                         value="High-energy outdoor adventure product campaign",
                     )
                     blueprint_data = api_client.architect(beat_sheet_data, creative_brief)
-                
+
                 with st.spinner("🎬 Producing cinematic assets..."):
                     production_assets_data = api_client.produce(blueprint_data)
-                
+
                 st.session_state.production_assets = production_assets_data
                 st.success("✨ Production Assets generated successfully!")
-                
+
             except BackendError as e:
                 st.error(f"❌ Backend error: {e}")
             except TimeoutError as e:

@@ -81,6 +81,48 @@ def test_deconstructor_workflow_mocked() -> None:
     assert at.session_state["production_assets"]["metadata"]["title"] == "Test Campaign"
 
 
+def test_deconstructor_workflow_youtube_url() -> None:
+    """Tier 2: the YouTube URL tab passes `reference_url` to api_client.deconstruct."""
+    at = AppTest.from_file(_APP_PATH)
+    at.run()
+
+    _disable_mock_mode(at)
+
+    # Transcript + YouTube URL
+    at.text_area[0].set_value("Welcome to my video!")
+    # In live mode, the only text_input present is the YouTube URL field
+    at.text_input[0].set_value("https://youtu.be/abc123")
+    at.run()
+
+    with patch("frontend.api_client.deconstruct", return_value=_CANNED_BEAT_SHEET) as mock_deconstruct, \
+         patch("frontend.api_client.architect", return_value=_CANNED_BLUEPRINT), \
+         patch("frontend.api_client.produce", return_value=_CANNED_PRODUCTION_ASSETS):
+        click_button(at, "Run Full Pipeline").click().run()
+
+    assert not at.exception
+    mock_deconstruct.assert_called_once_with(
+        "Welcome to my video!",
+        reference_url="https://youtu.be/abc123",
+    )
+    assert "production_assets" in at.session_state
+    assert at.session_state["production_assets"]["metadata"]["title"] == "Test Campaign"
+
+
+def test_deconstructor_tabs_render_upload_and_url_inputs() -> None:
+    """Tier 2: the Deconstructor offers a YouTube URL input and a media file uploader."""
+    at = AppTest.from_file(_APP_PATH)
+    at.run()
+
+    _disable_mock_mode(at)
+
+    # Both the YouTube URL input and the file uploader must be rendered.
+    assert len(at.tabs) == 2
+    assert any("YouTube URL" in tab.label for tab in at.tabs)
+    assert any("Upload File" in tab.label for tab in at.tabs)
+    assert len(at.text_input) == 1
+    assert len(at.file_uploader) == 1
+
+
 def test_live_mode_renders_production_assets() -> None:
     """Tier 2: When production_assets are in session_state, the dashboard renders correctly."""
     at = AppTest.from_file(_APP_PATH)

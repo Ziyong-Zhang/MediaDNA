@@ -1,5 +1,7 @@
+from typing import Annotated
+
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -8,9 +10,14 @@ load_dotenv()
 from backend.agents.architect import ArchitectAgent
 from backend.agents.deconstructor import DeconstructorAgent
 from backend.agents.director import DirectorAgent
-from backend.schemas.beat_sheet import BeatSheet, DeconstructRequest
+from backend.schemas.beat_sheet import BeatSheet
 from backend.schemas.blueprint import Blueprint
 from backend.schemas.production_assets import ProductionAssets
+from backend.services.media_service import (
+    cleanup_file,
+    download_youtube_audio,
+    save_uploaded_file,
+)
 
 app = FastAPI(title="MediaDNA Backend")
 
@@ -46,10 +53,36 @@ async def health_check() -> HealthResponse:
 
 
 @app.post("/api/v1/deconstruct", response_model=BeatSheet)
-async def deconstruct_media(payload: DeconstructRequest) -> BeatSheet:
-    """Deconstruct media (via reference URL or transcript) into a structured BeatSheet."""
+async def deconstruct(
+    transcript: Annotated[str | None, Form()] = None,
+    reference_url: Annotated[str | None, Form()] = None,
+    file: Annotated[UploadFile | None, File()] = None,
+) -> BeatSheet:
+    """Deconstruct media (via uploaded file, reference URL, or transcript) into a structured BeatSheet."""
     agent = DeconstructorAgent()
-    return await agent.extract_beat_sheet(reference_url=payload.reference_url, transcript=payload.transcript)
+
+    actual_transcript = (
+        transcript
+        if transcript and transcript.strip()
+        else "Analyze this reference media and extract its structural Viral DNA, including the hook, pacing, and emotional shifts."
+    )
+
+    if file is not None:
+        file_bytes = await file.read()
+        media_path = save_uploaded_file(file_bytes, file.filename or "upload")
+        try:
+            return await agent.extract_beat_sheet(text_content=actual_transcript, media_path=media_path)
+        finally:
+            cleanup_file(media_path)
+
+    if reference_url:
+        media_path = download_youtube_audio(reference_url)
+        try:
+            return await agent.extract_beat_sheet(text_content=actual_transcript, media_path=media_path)
+        finally:
+            cleanup_file(media_path)
+
+    return await agent.extract_beat_sheet(text_content=actual_transcript)
 
 
 @app.post("/api/v1/architect", response_model=Blueprint)

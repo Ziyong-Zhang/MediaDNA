@@ -1,12 +1,17 @@
+import asyncio
 import json
+import logging
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 from google import genai
 from google.genai import types
 
 from backend.schemas.beat_sheet import BeatSheet
+
+logger = logging.getLogger(__name__)
 
 
 def sanitize_json(text: str) -> str:
@@ -37,47 +42,37 @@ class DeconstructorAgent:
         self.location: str = os.getenv("GCP_LOCATION", "us-central1")
         self.client = genai.Client(enterprise=True, project=self.project_id, location=self.location)
 
-    async def extract_beat_sheet(
-        self,
-        reference_url: str | None = None,
-        transcript: str | None = None,
-    ) -> BeatSheet:
-        """Extract structured beat sheet from reference media URL or transcript.
-
-        Leverages Gemini 1.5 Pro with structured outputs to return a robust BeatSheet.
-
-        Args:
-            reference_url: Optional URL to reference video/audio media
-            transcript: Optional raw transcript or script text
-
-        Returns:
-            A populated BeatSheet model with detailed beats and pacing analysis.
-            
-        Raises:
-            ValueError: If neither reference_url nor transcript is provided.
-        """
-        if not reference_url and not transcript:
-            raise ValueError("Either reference_url or transcript must be provided.")
-
-        # Build the content description for Gemini
-        content_description = ""
-        if reference_url:
-            content_description += f"Reference URL: {reference_url}\n"
-        if transcript:
-            content_description += f"Transcript:\n{transcript}"
-
-        prompt: str = (
+    async def extract_beat_sheet(self, text_content: str, media_path: Path | None = None) -> BeatSheet:
+        """Extract a structured beat sheet from text and optional multimodal media using inline bytes."""
+        prompt = (
             "You are a master cinema deconstructor and media analyst. "
             "Analyze the following reference media and extract a detailed beat sheet. "
             "For each beat, identify the hook type, visual cue, audio cue, emotional shift, and retention driver. "
             "Also provide overall pacing score, viral potential summary, hooks, pacing curve, and key events. "
             "Return valid JSON strictly matching the schema below.\n\n"
-            f"{content_description}"
+            f"{text_content}"
         )
 
+        # Assemble the multimodal payload using Inline Bytes
+        contents: list[Any] = []
+        if media_path is not None and media_path.exists():
+            # Offload blocking file I/O to a separate thread
+            media_bytes = await asyncio.to_thread(media_path.read_bytes)
+            
+            # Create an inline Part object. (.m4a maps to audio/mp4)
+            audio_part = types.Part.from_bytes(
+                data=media_bytes,
+                mime_type="audio/mp4",
+            )
+            contents.append(audio_part)
+            logger.info(f"Appended inline media bytes to prompt from: {media_path.name}")
+
+        contents.append(prompt)
+
+        # Direct call without try...finally because there is no remote state to clean up
         response = await self.client.aio.models.generate_content(
             model="gemini-2.5-flash",
-            contents=prompt,
+            contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema={
@@ -124,16 +119,14 @@ class DeconstructorAgent:
                 },
             ),
         )
-
-        # Sanitize and parse response JSON
+        
         response_text = response.text or ""
         cleaned_json = sanitize_json(response_text)
         response_dict: dict[str, Any] = json.loads(cleaned_json)
         return BeatSheet.model_validate(response_dict)
-
     async def analyze_media(self, content: str) -> BeatSheet:
         """Deprecated: Use extract_beat_sheet instead.
         
         Analyze unstructured media content for backward compatibility.
         """
-        return await self.extract_beat_sheet(transcript=content)
+        return await self.extract_beat_sheet(text_content=content)

@@ -22,6 +22,11 @@ Build "MediaDNA" for the Agentic Cinema Hackathon.
 - Auth: `make auth`
 - Validate: `make check`
 
+## Python Execution & Environment Rules
+- **PYTHONPATH Convention**: The project relies on the root directory for module resolution. Whenever you execute tests (`pytest`), linters (`ruff`), type checkers (`mypy`), or run Python scripts via the terminal, you MUST unconditionally prefix the command with `PYTHONPATH=.`. 
+- **Command Example**: Do not use `uv run pytest`, instead use `PYTHONPATH=. uv run python -m pytest tests/`.
+- **Reasoning**: This prevents `ModuleNotFoundError` for internal backend packages (e.g., `backend.services...`) and avoids wasting time debugging environment paths.
+
 ## Definition of Done
 - Feature complete = end-to-end verification passed, not "code is written"
 - Required verification levels:
